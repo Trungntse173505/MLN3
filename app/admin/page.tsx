@@ -557,10 +557,14 @@ export default function AdminPage() {
                                 let proposedStatus = "🟢 CÒN SỐNG";
                                 if (!gameState.resultsApplied) {
                                   if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
-                                    proposedStatus = "💀 DỰ KIẾN BỊ LOẠI";
+                                    proposedStatus = "💀 DỰ KIẾN MỚI BỊ LOẠI";
                                   }
                                 } else {
-                                  proposedStatus = p.status === "alive" ? "🟢 CÒN SỐNG" : p.status === "winner" ? "🏆 WINNER" : "💀 ĐÃ BỊ LOẠI";
+                                  proposedStatus = p.status === "alive"
+                                    ? "🟢 CÒN SỐNG"
+                                    : p.status === "winner"
+                                      ? "🏆 WINNER"
+                                      : (p.lastAction === "eliminated" ? "💀 MỚI BỊ LOẠI" : "💀 BỊ LOẠI");
                                 }
 
                                 return (
@@ -634,7 +638,7 @@ export default function AdminPage() {
                                     let proposed = "🟢 CÒN SỐNG";
                                     if (!gameState.resultsApplied) {
                                       if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
-                                        proposed = "💀 DỰ KIẾN BỊ LOẠI";
+                                        proposed = "💀 DỰ KIẾN MỚI BỊ LOẠI";
                                       }
                                     } else {
                                       if (p.lastAction === "resurrected") {
@@ -703,14 +707,14 @@ export default function AdminPage() {
                                     const isCorrect = p.answer === correctAnswer;
                                     const answered = p.answer !== null && p.answer !== undefined;
 
-                                    let proposed = "💀 TIẾP TỤC BỊ LOẠI";
+                                    let proposed = "💀 BỊ LOẠI";
                                     if (!gameState.resultsApplied) {
                                       if (gameState.pendingResurrections?.includes(p.name)) {
                                         proposed = "🎉 DỰ KIẾN HỒI SINH";
                                       }
                                     } else {
                                       if (p.lastAction === "eliminated") {
-                                        proposed = "💀 ĐÃ BỊ LOẠI";
+                                        proposed = "💀 MỚI BỊ LOẠI";
                                       }
                                     }
 
@@ -735,7 +739,7 @@ export default function AdminPage() {
                                             : "-"}
                                         </td>
                                         <td className="py-2 px-2 font-bold">
-                                          <span className={proposed.includes("HỒI SINH") ? "text-amber-400" : proposed === "💀 ĐÃ BỊ LOẠI" ? "text-red-500" : "text-zinc-500"}>
+                                          <span className={proposed.includes("HỒI SINH") ? "text-amber-400" : proposed === "💀 MỚI BỊ LOẠI" ? "text-red-500" : "text-zinc-500"}>
                                             {proposed}
                                           </span>
                                         </td>

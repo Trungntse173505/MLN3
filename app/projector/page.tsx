@@ -324,10 +324,12 @@ export default function ProjectorPage() {
                               let proposedStatus = "CÒN SỐNG";
                               if (!gameState.resultsApplied) {
                                 if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
-                                  proposedStatus = "DỰ KIẾN BỊ LOẠI";
+                                  proposedStatus = "DỰ KIẾN MỚI BỊ LOẠI";
                                 }
                               } else {
-                                proposedStatus = p.status === "dead" ? "ĐÃ BỊ LOẠI" : "CÒN SỐNG";
+                                proposedStatus = p.status === "dead"
+                                  ? (p.lastAction === "eliminated" ? "MỚI BỊ LOẠI" : "BỊ LOẠI")
+                                  : "CÒN SỐNG";
                               }
 
                               return (
@@ -398,7 +400,7 @@ export default function ProjectorPage() {
                                   let statusText = "CÒN SỐNG";
                                   if (!gameState.resultsApplied) {
                                     if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
-                                      statusText = "DỰ KIẾN BỊ LOẠI";
+                                      statusText = "DỰ KIẾN MỚI BỊ LOẠI";
                                     }
                                   } else {
                                     if (p.lastAction === "resurrected") {
@@ -467,14 +469,14 @@ export default function ProjectorPage() {
                                   const isCorrect = p.answer === correctAnswer;
                                   const answered = p.answer !== null && p.answer !== undefined;
 
-                                  let statusText = "TIẾP TỤC BỊ LOẠI";
+                                  let statusText = "BỊ LOẠI";
                                   if (!gameState.resultsApplied) {
                                     if (gameState.pendingResurrections?.includes(p.name)) {
                                       statusText = "DỰ KIẾN HỒI SINH";
                                     }
                                   } else {
                                     if (p.lastAction === "eliminated") {
-                                      statusText = "ĐÃ BỊ LOẠI";
+                                      statusText = "MỚI BỊ LOẠI";
                                     }
                                   }
 
@@ -499,7 +501,7 @@ export default function ProjectorPage() {
                                           : "-"}
                                       </td>
                                       <td className="py-2.5 px-3 text-right font-bold">
-                                        <span className={statusText.includes("HỒI SINH") ? "text-amber-400 animate-pulse font-extrabold" : statusText === "ĐÃ BỊ LOẠI" ? "text-red-500 font-extrabold" : "text-zinc-500"}>
+                                        <span className={statusText.includes("HỒI SINH") ? "text-amber-400 animate-pulse font-extrabold" : statusText === "MỚI BỊ LOẠI" ? "text-red-500 font-extrabold" : "text-zinc-500"}>
                                           {statusText}
                                         </span>
                                       </td>
