@@ -9,6 +9,18 @@ import { GlassCard } from "../../components/ui/GlassCard";
 import { ResurrectionLeaderboard, LeaderboardEntry } from "../../components/ui/ResurrectionLeaderboard";
 import { Trophy, Users, ShieldCheck, Heartbeat, ShieldWarning } from "@phosphor-icons/react";
 
+// Helper function to sort players based on correctness and speed
+const sortPlayersForRound = (list: Player[], correctAnswer: boolean) => {
+  const correct = list.filter(p => p.answer === correctAnswer && p.answerTime != null);
+  const wrong = list.filter(p => p.answer !== correctAnswer && p.answer !== null && p.answer !== undefined);
+  const noAnswer = list.filter(p => p.answer === null || p.answer === undefined);
+
+  // Sort correct by answerTime asc
+  correct.sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
+
+  return [...correct, ...wrong, ...noAnswer];
+};
+
 export default function ProjectorPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [players, setPlayers] = useState<Record<string, Player>>({});
@@ -253,177 +265,245 @@ export default function ProjectorPage() {
               </div>
             </div>
 
-            {/* Explanation & Resurrection Leaderboard (only show in reveal phase) */}
+            {/* Detailed Round Evaluation Tables for Projector */}
             {gameState.phase === "reveal" && (
-              <div className="space-y-6 pt-4 animate-fade-in">
+              <div className="space-y-6 pt-6 animate-fade-in max-w-5xl mx-auto w-full">
+                {/* Status header banner */}
+                <div className="text-center">
+                  <span className={`inline-block px-6 py-2 rounded-full font-mono text-sm font-bold uppercase tracking-widest ${
+                    gameState.resultsApplied
+                      ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 glow-green"
+                      : "bg-amber-500/10 border border-amber-500/30 text-[#f59e0b] animate-pulse glow-gold"
+                  }`}>
+                    {gameState.resultsApplied 
+                      ? "KẾT QUẢ CHÍNH THỨC" 
+                      : "KẾT QUẢ DỰ KIẾN — CHỜ ADMIN XÁC NHẬN"}
+                  </span>
+                </div>
+
+                {/* Explanation text if exists */}
                 {currentQ.explanation && (
-                  <div className="max-w-3xl mx-auto text-center px-6 py-4 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="max-w-3xl mx-auto text-center px-6 py-3 rounded-xl bg-white/[0.02] border border-white/5">
                     <p className="text-sm leading-relaxed text-zinc-400">{currentQ.explanation}</p>
                   </div>
                 )}
 
-                {gameState.mode === "normal" ? (
-                  <>
-                    {/* Status header banner */}
-                    <div className="text-center mb-6">
-                      <span className={`inline-block px-4 py-1.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider ${
-                        gameState.resultsApplied
-                          ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
-                          : "bg-amber-500/10 border border-amber-500/30 text-[#f59e0b] animate-pulse"
-                      }`}>
-                        {gameState.resultsApplied 
-                          ? "KẾT QUẢ CHÍNH THỨC" 
-                          : "KẾT QUẢ DỰ KIẾN — CHỜ ADMIN XÁC NHẬN"}
-                      </span>
+                {/* Question 1: Unified Table */}
+                {gameState.currentQuestion === 1 ? (
+                  <GlassCard>
+                    <div className="space-y-4">
+                      <div className="text-sm uppercase font-mono font-bold text-zinc-400 tracking-wider text-center">
+                        Bảng Xếp Hạng Vòng 1 (Toàn Bộ Người Chơi)
+                      </div>
+                      <div className="overflow-x-auto font-mono text-sm text-zinc-300">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-white/10 text-zinc-500 font-bold">
+                              <th className="py-3 px-4">Hạng</th>
+                              <th className="py-3 px-4">Tên</th>
+                              <th className="py-3 px-4">Kết Quả</th>
+                              <th className="py-3 px-4 text-right">Thời Gian</th>
+                              <th className="py-3 px-4 text-right">Trạng Thái Sau Vòng</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortPlayersForRound(playerList, correctAnswer).map((p, idx) => {
+                              const isCorrect = p.answer === correctAnswer;
+                              const answered = p.answer !== null && p.answer !== undefined;
+
+                              let proposedStatus = "CÒN SỐNG";
+                              if (!gameState.resultsApplied) {
+                                if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
+                                  proposedStatus = "DỰ KIẾN BỊ LOẠI";
+                                }
+                              } else {
+                                proposedStatus = p.status === "dead" ? "ĐÃ BỊ LOẠI" : "CÒN SỐNG";
+                              }
+
+                              return (
+                                <tr key={p.name} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                  <td className="py-3 px-4 font-bold text-white">
+                                    {isCorrect ? `${idx + 1}` : "-"}
+                                  </td>
+                                  <td className="py-3 px-4 font-semibold text-white">{p.name}</td>
+                                  <td className="py-3 px-4">
+                                    {!answered ? (
+                                      <span className="text-zinc-600">Không trả lời</span>
+                                    ) : isCorrect ? (
+                                      <span className="text-emerald-400 font-bold">ĐÚNG</span>
+                                    ) : (
+                                      <span className="text-red-400 font-bold">SAI</span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-4 text-right font-bold text-zinc-300">
+                                    {p.answerTime && gameState.questionStartTime 
+                                      ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
+                                      : "-"}
+                                  </td>
+                                  <td className="py-3 px-4 text-right font-bold">
+                                    <span className={
+                                      proposedStatus.includes("CÒN SỐNG") ? "text-emerald-400" : "text-red-400"
+                                    }>
+                                      {proposedStatus}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-
-                    {/* Hồi sinh và loại ở Vòng Thường */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-                      {/* Bị loại */}
-                      {(() => {
-                        const elimList = gameState.resultsApplied
-                          ? (gameState.eliminatedThisRound || [])
-                          : [...(gameState.pendingEliminations || []), ...(gameState.pendingAdditionalEliminations || [])];
-
-                        return (
-                          <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-2">
-                            <div className="text-xs uppercase font-mono font-bold text-red-400">
-                              💀 {gameState.resultsApplied ? "Bị Loại Vòng Này" : "Dự Kiến Bị Loại"} ({elimList.length})
-                            </div>
-                            {elimList.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {elimList.map(name => (
-                                  <span key={name} className="px-2.5 py-1 text-xs rounded bg-red-500/10 border border-red-500/20 text-red-300 font-medium">
-                                    {name}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs text-zinc-500 font-mono italic">Không có ai bị loại.</p>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Hồi sinh */}
-                      {(() => {
-                        const resurrectList = gameState.resultsApplied
-                          ? (gameState.resurrectedThisRound || [])
-                          : (gameState.pendingResurrections || []);
-
-                        return (
-                          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 space-y-2">
-                            <div className="text-xs uppercase font-mono font-bold text-emerald-400">
-                              🎉 {gameState.resultsApplied ? "Hồi Sinh Vòng Này" : "Dự Kiến Hồi Sinh"} ({resurrectList.length})
-                            </div>
-                            {resurrectList.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {resurrectList.map(name => (
-                                  <span key={name} className="px-2.5 py-1 text-xs rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
-                                    {name}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs text-zinc-500 font-mono italic">Không có ai được hồi sinh.</p>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    <div className="pt-2">
-                      <ResurrectionLeaderboard entries={leaderboardEntries} />
-                    </div>
-                  </>
+                  </GlassCard>
                 ) : (
-                  <>
-                    {/* Chi tiết Vòng Sinh Tồn */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
-                      {/* Hồi sinh vòng này (collapse) */}
-                      {gameState.resurrectedThisRound && gameState.resurrectedThisRound.length > 0 && (
-                        <div className="col-span-full p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2 animate-fade-in">
-                          <div className="text-xs uppercase font-mono font-bold text-emerald-400">🎉 Hồi Sinh Vòng Này ({gameState.resurrectedThisRound.length})</div>
-                          <div className="flex flex-wrap gap-2">
-                            {gameState.resurrectedThisRound.map(name => (
-                              <span key={name} className="px-2.5 py-1 text-xs rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
-                                {name}
-                              </span>
-                            ))}
-                          </div>
-                          <p className="text-xs text-zinc-400 font-mono">Những người này đã được hồi sinh và sẽ tham gia tranh suất Top 3 ở câu sau.</p>
-                        </div>
-                      )}
+                  /* Question 2+: Side-by-Side Tables */
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                      {/* Trả lời đúng */}
-                      <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 space-y-2">
-                        <div className="text-xs uppercase font-mono font-bold text-emerald-400">🟢 Trả lời đúng</div>
-                        <div className="space-y-1 max-h-[150px] overflow-y-auto pr-1">
-                          {playerList
-                            .filter(p => gameState.survivalContestants?.includes(p.name) && p.answer === correctAnswer)
-                            .map(p => (
-                              <div key={p.name} className="flex justify-between items-center text-xs font-mono text-zinc-300">
-                                <span>{p.name}</span>
-                                <span className="text-zinc-500">
-                                  {p.answerTime && gameState.questionStartTime 
-                                    ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s` 
-                                    : ""}
-                                </span>
-                              </div>
-                            ))}
-                          {playerList.filter(p => gameState.survivalContestants?.includes(p.name) && p.answer === correctAnswer).length === 0 && (
-                            <p className="text-xs text-zinc-600 italic">Không có ai đúng</p>
-                          )}
+                    {/* BẢNG NGƯỜI SỐNG */}
+                    <GlassCard>
+                      <div className="space-y-4">
+                        <div className="text-sm uppercase font-mono font-bold text-emerald-400 tracking-wider text-center">
+                          🧍 BẢNG NGƯỜI SỐNG ({
+                            playerList.filter(p => p.status === "alive" || p.status === "winner").length
+                          })
+                        </div>
+                        <div className="overflow-x-auto font-mono text-xs text-zinc-300">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 text-zinc-500 font-bold">
+                                <th className="py-2.5 px-3">Hạng</th>
+                                <th className="py-2.5 px-3">Tên</th>
+                                <th className="py-2.5 px-3">Kết Quả</th>
+                                <th className="py-2.5 px-3 text-right">Thời Gian</th>
+                                <th className="py-2.5 px-3 text-right">Trạng Thái</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                const alivePlayers = playerList.filter(p => p.status === "alive" || p.status === "winner");
+                                return sortPlayersForRound(alivePlayers, correctAnswer).map((p, idx) => {
+                                  const isCorrect = p.answer === correctAnswer;
+                                  const answered = p.answer !== null && p.answer !== undefined;
+
+                                  let statusText = "CÒN SỐNG";
+                                  if (!gameState.resultsApplied) {
+                                    if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
+                                      statusText = "DỰ KIẾN BỊ LOẠI";
+                                    }
+                                  } else {
+                                    if (p.lastAction === "resurrected") {
+                                      statusText = "ĐÃ HỒI SINH";
+                                    }
+                                  }
+
+                                  return (
+                                    <tr key={p.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                      <td className="py-2.5 px-3 font-bold text-white">
+                                        {isCorrect ? `${idx + 1}` : "-"}
+                                      </td>
+                                      <td className="py-2.5 px-3 font-semibold text-white truncate max-w-[100px]" title={p.name}>{p.name}</td>
+                                      <td className="py-2.5 px-3">
+                                        {!answered ? (
+                                          <span className="text-zinc-600">N/A</span>
+                                        ) : isCorrect ? (
+                                          <span className="text-emerald-400 font-bold">ĐÚNG</span>
+                                        ) : (
+                                          <span className="text-red-400 font-bold">SAI</span>
+                                        )}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right font-bold text-zinc-300">
+                                        {p.answerTime && gameState.questionStartTime 
+                                          ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
+                                          : "-"}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right font-bold">
+                                        <span className={statusText.includes("BỊ LOẠI") ? "text-red-400" : statusText === "ĐÃ HỒI SINH" ? "text-amber-400 animate-pulse font-extrabold" : "text-emerald-400"}>
+                                          {statusText}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
+                    </GlassCard>
 
-                      {/* Trả lời sai / Không trả lời */}
-                      <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-2">
-                        <div className="text-xs uppercase font-mono font-bold text-red-400">🔴 Trả lời sai / Không trả lời</div>
-                        <div className="space-y-1 max-h-[150px] overflow-y-auto pr-1 text-xs font-mono text-zinc-300">
-                          {playerList
-                            .filter(p => gameState.survivalContestants?.includes(p.name) && p.answer !== correctAnswer)
-                            .map(p => (
-                              <div key={p.name}>
-                                {p.name} <span className="text-zinc-600">({p.answer === null ? "Không trả lời" : "Sai"})</span>
-                              </div>
-                            ))}
-                          {playerList.filter(p => gameState.survivalContestants?.includes(p.name) && p.answer !== correctAnswer).length === 0 && (
-                            <p className="text-xs text-zinc-600 italic">Không có ai sai</p>
-                          )}
+                    {/* BẢNG NGƯỜI CHẾT */}
+                    <GlassCard>
+                      <div className="space-y-4">
+                        <div className="text-sm uppercase font-mono font-bold text-red-400 tracking-wider text-center">
+                          💀 BẢNG NGƯỜI CHẾT ({
+                            playerList.filter(p => p.status === "dead").length
+                          })
+                        </div>
+                        <div className="overflow-x-auto font-mono text-xs text-zinc-300">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 text-zinc-500 font-bold">
+                                <th className="py-2.5 px-3">Hạng</th>
+                                <th className="py-2.5 px-3">Tên</th>
+                                <th className="py-2.5 px-3">Kết Quả</th>
+                                <th className="py-2.5 px-3 text-right">Thời Gian</th>
+                                <th className="py-2.5 px-3 text-right">Trạng Thái</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                const deadPlayers = playerList.filter(p => p.status === "dead");
+                                return sortPlayersForRound(deadPlayers, correctAnswer).map((p, idx) => {
+                                  const isCorrect = p.answer === correctAnswer;
+                                  const answered = p.answer !== null && p.answer !== undefined;
+
+                                  let statusText = "TIẾP TỤC BỊ LOẠI";
+                                  if (!gameState.resultsApplied) {
+                                    if (gameState.pendingResurrections?.includes(p.name)) {
+                                      statusText = "DỰ KIẾN HỒI SINH";
+                                    }
+                                  } else {
+                                    if (p.lastAction === "eliminated") {
+                                      statusText = "ĐÃ BỊ LOẠI";
+                                    }
+                                  }
+
+                                  return (
+                                    <tr key={p.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                      <td className="py-2.5 px-3 font-bold text-white">
+                                        {isCorrect ? `${idx + 1}` : "-"}
+                                      </td>
+                                      <td className="py-2.5 px-3 font-semibold text-white truncate max-w-[100px]" title={p.name}>{p.name}</td>
+                                      <td className="py-2.5 px-3">
+                                        {!answered ? (
+                                          <span className="text-zinc-600">N/A</span>
+                                        ) : isCorrect ? (
+                                          <span className="text-emerald-400 font-bold">ĐÚNG</span>
+                                        ) : (
+                                          <span className="text-red-400 font-bold">SAI</span>
+                                        )}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right font-bold text-zinc-300">
+                                        {p.answerTime && gameState.questionStartTime 
+                                          ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
+                                          : "-"}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right font-bold">
+                                        <span className={statusText.includes("HỒI SINH") ? "text-amber-400 animate-pulse font-extrabold" : statusText === "ĐÃ BỊ LOẠI" ? "text-red-500 font-extrabold" : "text-zinc-500"}>
+                                          {statusText}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
+                    </GlassCard>
 
-                      {/* Suất thắng vòng này */}
-                      <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 space-y-2">
-                        <div className="text-xs uppercase font-mono font-bold text-amber-400">🏆 Suất thắng vòng này</div>
-                        <div className="space-y-2">
-                          {gameState.winnersThisRound && gameState.winnersThisRound.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
-                              {gameState.winnersThisRound.map(name => (
-                                <span key={name} className="px-2.5 py-0.5 text-xs rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
-                                  {name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <p className="text-xs text-zinc-500 italic">Chưa xác định thêm người thắng.</p>
-                              {playerList.filter(p => gameState.survivalContestants?.includes(p.name) && p.answer === correctAnswer).length === 0 && (
-                                <p className="text-[11px] text-[#f59e0b] font-medium leading-relaxed font-mono">
-                                  ⚠️ Chưa có người giành được suất.<br />
-                                  Nhóm hiện tại sẽ tiếp tục với câu hỏi tiếp theo.
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          <div className="text-[11px] font-mono text-zinc-400 border-t border-white/5 pt-2">
-                            Số slot thắng còn lại: <strong className="text-white font-bold">{gameState.winnerSlotsRemaining ?? 3}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}

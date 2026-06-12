@@ -49,7 +49,7 @@ export default function PlayPage() {
     if (!isRegistered || !playerName) return;
     const sanitized = sanitizeKey(playerName);
     const playerRef = ref(db, `players/${sanitized}`);
-    
+
     return onValue(playerRef, (snapshot) => {
       if (snapshot.exists()) {
         const val: Player = snapshot.val();
@@ -66,7 +66,7 @@ export default function PlayPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!playerName.trim()) return;
-    
+
     const ok = await joinGame(playerName);
     if (ok) {
       localStorage.setItem("playerName", playerName.trim());
@@ -182,7 +182,7 @@ export default function PlayPage() {
     ? gameState.survivalContestants.includes(playerData.name)
     : true;
   const isAllowedToAnswer = (gameState.mode === "normal" && (playerData.status === "alive" || playerData.status === "dead")) ||
-                            (gameState.mode === "survival" && playerData.status === "alive" && isContestant);
+    (gameState.mode === "survival" && playerData.status === "alive" && isContestant);
 
   return (
     <main className="flex min-h-[100dvh] flex-col bg-[#050505] p-4 text-white relative">
@@ -202,7 +202,7 @@ export default function PlayPage() {
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full pb-8">
-        
+
         {/* Phase 1: LOBBY */}
         {gameState.phase === "lobby" && (
           <div className="text-center space-y-6 animate-fade-in-up">
@@ -245,8 +245,8 @@ export default function PlayPage() {
                   {gameState.mode === "normal" ? (
                     playerData.status === "alive"
                       ? (playerData.lastAction === "resurrected"
-                          ? "🎉 Bạn đã được hồi sinh và đang tranh suất Top 3."
-                          : "🟢 Bạn đang còn sống. Hãy trả lời để tiếp tục sống sót.")
+                        ? "🎉 Bạn đã được hồi sinh và đang tranh suất Top 3."
+                        : "🟢 Bạn đang còn sống. Hãy trả lời để tiếp tục sống sót.")
                       : "💀 Bạn đã bị loại, nhưng vẫn có thể tranh hồi sinh. Trả lời đúng và nhanh nhất để quay lại game."
                   ) : (
                     playerData.lastAction === "resurrected"
@@ -260,7 +260,7 @@ export default function PlayPage() {
                     {errorMsg}
                   </div>
                 )}
-                
+
                 {selectedAnswer === null ? (
                   <div className="grid grid-cols-2 gap-4">
                     <button
@@ -270,7 +270,7 @@ export default function PlayPage() {
                       <Check size={32} weight="bold" className="mb-2" />
                       <span className="font-bold text-sm">ĐÚNG</span>
                     </button>
-                    
+
                     <button
                       onClick={() => handleSelectAnswer(false)}
                       className="flex flex-col items-center justify-center py-8 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/40 hover:scale-[1.02] active:scale-[0.98] transition-spring cursor-pointer"
@@ -315,7 +315,7 @@ export default function PlayPage() {
                     {gameState.mode === "survival" && !isContestant ? "Bạn đã bị loại khỏi vòng tranh suất." : "BẠN ĐÃ BỊ LOẠI"}
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed px-4">
-                    {gameState.mode === "survival" && !isContestant 
+                    {gameState.mode === "survival" && !isContestant
                       ? "Vòng sinh tồn đã bắt đầu và bạn không nằm trong danh sách tranh suất. Hãy theo dõi các bạn khác thi đấu!"
                       : "Vòng sinh tồn đã bắt đầu và tính năng hồi sinh đã bị khóa. Hãy theo dõi các bạn còn lại thi đấu!"}
                   </p>
@@ -329,13 +329,12 @@ export default function PlayPage() {
         {gameState.phase === "reveal" && currentQ && (
           <div className="space-y-6 animate-fade-in-up">
             <h3 className="text-xs font-mono text-zinc-500 text-center">Kết quả câu {gameState.currentQuestion}</h3>
-            
+
             <GlassCard>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs ${
-                    currentQ.answer ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
-                  }`}>
+                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs ${currentQ.answer ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                    }`}>
                     {currentQ.answer ? <Check size={12} weight="bold" /> : <X size={12} weight="bold" />}
                   </span>
                   <span className="font-mono text-xs uppercase tracking-wider text-zinc-500">Đáp án chính xác</span>
@@ -373,10 +372,7 @@ export default function PlayPage() {
             ) : gameState.resurrectedThisRound?.includes(playerData.name) ? (
               <div className="text-center p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 glow-gold space-y-3">
                 <div className="text-2xl">🎉 🌟 🎉</div>
-                <h3 className="font-bold text-amber-400 text-lg">BẠN ĐẠI CÁT ĐÃ ĐƯỢC HỒI SINH!</h3>
-                <p className="text-xs text-zinc-300 px-4 leading-relaxed">
-                  Nhờ câu trả lời đúng và siêu tốc của mình. Hãy chuẩn bị chiến đấu ở câu tiếp theo!
-                </p>
+                <h3 className="font-bold text-amber-400 text-lg">BẠN ĐÃ ĐƯỢC HỒI SINH!</h3>
               </div>
             ) : playerData.status === "dead" ? (
               <div className="text-center p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3 opacity-80">
@@ -392,16 +388,16 @@ export default function PlayPage() {
                   {gameState.mode === "survival" && !isContestant
                     ? "Rất tiếc, bạn đã bị loại khỏi vòng tranh suất chiến thắng. Hãy tiếp tục theo dõi diễn biến trận đấu nhé!"
                     : (gameState.eliminatedThisRound?.includes(playerData.name) ? (
-                        selectedAnswer === currentQ.answer 
-                          ? "Bạn đã trả lời ĐÚNG nhưng chậm nhất và bị loại để đủ quota. Cố gắng ở câu sau!"
-                          : "Bạn đã trả lời SAI hoặc không trả lời kịp nên đã bị loại. Cố gắng ở câu sau!"
-                      ) : (
-                        gameState.mode === "survival"
-                          ? "Vòng sinh tồn đã bắt đầu nên cơ hội hồi sinh đã đóng. Hãy theo dõi tiếp nhé!"
-                          : selectedAnswer === currentQ.answer 
-                            ? "Bạn trả lời ĐÚNG nhưng chưa đủ nhanh để lọt top hồi sinh. Cố gắng thêm ở câu sau!"
-                            : "Bạn trả lời chưa chính xác. Hãy ôn lại kiến thức và canh câu sau nhé!"
-                      ))}
+                      selectedAnswer === currentQ.answer
+                        ? "Bạn đã trả lời ĐÚNG nhưng chậm nhất và bị loại để đủ quota. Cố gắng ở câu sau!"
+                        : "Bạn đã trả lời SAI hoặc không trả lời kịp nên đã bị loại. Cố gắng ở câu sau!"
+                    ) : (
+                      gameState.mode === "survival"
+                        ? "Vòng sinh tồn đã bắt đầu nên cơ hội hồi sinh đã đóng. Hãy theo dõi tiếp nhé!"
+                        : selectedAnswer === currentQ.answer
+                          ? "Bạn trả lời ĐÚNG nhưng chưa đủ nhanh để lọt top hồi sinh. Cố gắng thêm ở câu sau!"
+                          : "Bạn trả lời chưa chính xác. Hãy ôn lại kiến thức và canh câu sau nhé!"
+                    ))}
                 </p>
               </div>
             ) : (
@@ -429,11 +425,10 @@ export default function PlayPage() {
               </p>
             </div>
 
-            <div className={`p-6 rounded-2xl border ${
-              playerData.status === "winner" || playerData.status === "alive"
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 glow-green"
-                : "bg-red-500/10 border-red-500/30 text-red-300 glow-red"
-            }`}>
+            <div className={`p-6 rounded-2xl border ${playerData.status === "winner" || playerData.status === "alive"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 glow-green"
+              : "bg-red-500/10 border-red-500/30 text-red-300 glow-red"
+              }`}>
               <span className="text-sm font-mono block mb-1">Kết quả chung cuộc</span>
               <span className="text-lg font-bold tracking-wider">
                 {playerData.status === "winner" || playerData.status === "alive" ? "👑 TOP 3 CHIẾN THẮNG CHUNG CUỘC!" : "💀 ĐÃ BỊ LOẠI"}

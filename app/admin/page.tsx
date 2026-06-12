@@ -549,7 +549,7 @@ export default function AdminPage() {
                                 <th className="py-2 px-3">Đáp Án</th>
                                 <th className="py-2 px-3 text-right">Tốc Độ</th>
                                 <th className="py-2 px-3">Trạng Thái</th>
-                                <th className="py-2 px-3">Dự Kiến Sau Vòng</th>
+                                <th className="py-2 px-3">Trạng Thái Mới</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -557,16 +557,13 @@ export default function AdminPage() {
                                 const isCorrect = p.answer === correctAnswer;
                                 const answered = p.answer !== null && p.answer !== undefined;
 
-                                let proposedStatus = "🟢 Sống Sót";
-                                if (gameState.resultsCalculated) {
-                                  if (gameState.pendingEliminations?.includes(p.name)) {
-                                    proposedStatus = "💀 Dự Kiến Loại (Sai/Chưa trả lời)";
-                                  } else if (gameState.pendingAdditionalEliminations?.includes(p.name)) {
-                                    proposedStatus = "💀 Dự Kiến Loại (Chậm nhất)";
+                                let proposedStatus = "🟢 CÒN SỐNG";
+                                if (!gameState.resultsApplied) {
+                                  if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
+                                    proposedStatus = "💀 DỰ KIẾN BỊ LOẠI";
                                   }
-                                }
-                                if (gameState.resultsApplied) {
-                                  proposedStatus = p.status === "alive" ? "🟢 Sống Sót" : p.status === "winner" ? "🏆 Winner" : "💀 Bị Loại";
+                                } else {
+                                  proposedStatus = p.status === "alive" ? "🟢 CÒN SỐNG" : p.status === "winner" ? "🏆 WINNER" : "💀 ĐÃ BỊ LOẠI";
                                 }
 
                                 return (
@@ -594,8 +591,7 @@ export default function AdminPage() {
                                     </td>
                                     <td className="py-2.5 px-3 font-bold">
                                       <span className={
-                                        proposedStatus.includes("🟢") ? "text-emerald-400" :
-                                        proposedStatus.includes("🏆") ? "text-amber-400" : "text-red-400"
+                                        proposedStatus.includes("CÒN SỐNG") || proposedStatus.includes("WINNER") ? "text-emerald-400" : "text-red-400"
                                       }>
                                         {proposedStatus}
                                       </span>
@@ -617,15 +613,7 @@ export default function AdminPage() {
                         <div className="space-y-4">
                           <div className="text-xs uppercase font-mono font-bold text-emerald-400">
                             🧍 BẢNG NGƯỜI SỐNG ({
-                              playerList.filter(p => {
-                                if (!gameState.resultsApplied) {
-                                  return p.status === "alive";
-                                } else {
-                                  const wasResurrected = p.lastAction === "resurrected";
-                                  const wasEliminated = p.lastAction === "eliminated";
-                                  return (p.status === "alive" && !wasResurrected) || wasEliminated;
-                                }
-                              }).length
+                              playerList.filter(p => p.status === "alive" || p.status === "winner").length
                             })
                           </div>
                           <div className="overflow-x-auto font-mono text-xs text-zinc-300">
@@ -636,35 +624,25 @@ export default function AdminPage() {
                                   <th className="py-2 px-2">Tên</th>
                                   <th className="py-2 px-2">Đáp Án</th>
                                   <th className="py-2 px-2 text-right">Tốc Độ</th>
-                                  <th className="py-2 px-2">Dự Kiến</th>
+                                  <th className="py-2 px-2">Trạng Thái</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {(() => {
-                                  const aliveBeforeRound = playerList.filter(p => {
-                                    if (!gameState.resultsApplied) {
-                                      return p.status === "alive";
-                                    } else {
-                                      const wasResurrected = p.lastAction === "resurrected";
-                                      const wasEliminated = p.lastAction === "eliminated";
-                                      return (p.status === "alive" && !wasResurrected) || wasEliminated;
-                                    }
-                                  });
-
-                                  return sortPlayersForRound(aliveBeforeRound, correctAnswer).map((p, idx) => {
+                                  const alivePlayers = playerList.filter(p => p.status === "alive" || p.status === "winner");
+                                  return sortPlayersForRound(alivePlayers, correctAnswer).map((p, idx) => {
                                     const isCorrect = p.answer === correctAnswer;
                                     const answered = p.answer !== null && p.answer !== undefined;
 
-                                    let proposed = "🟢 Sống sót";
-                                    if (gameState.resultsCalculated) {
-                                      if (gameState.pendingEliminations?.includes(p.name)) {
-                                        proposed = "💀 Loại (Sai/Không TL)";
-                                      } else if (gameState.pendingAdditionalEliminations?.includes(p.name)) {
-                                        proposed = "💀 Loại (Chậm)";
+                                    let proposed = "🟢 CÒN SỐNG";
+                                    if (!gameState.resultsApplied) {
+                                      if (gameState.pendingEliminations?.includes(p.name) || gameState.pendingAdditionalEliminations?.includes(p.name)) {
+                                        proposed = "💀 DỰ KIẾN BỊ LOẠI";
                                       }
-                                    }
-                                    if (gameState.resultsApplied) {
-                                      proposed = p.status === "alive" ? "🟢 Sống sót" : "💀 Bị Loại";
+                                    } else {
+                                      if (p.lastAction === "resurrected") {
+                                        proposed = "🎉 ĐÃ HỒI SINH";
+                                      }
                                     }
 
                                     return (
@@ -688,7 +666,7 @@ export default function AdminPage() {
                                             : "-"}
                                         </td>
                                         <td className="py-2 px-2 font-bold">
-                                          <span className={proposed.includes("🟢") ? "text-emerald-400" : "text-red-400"}>
+                                          <span className={proposed.includes("LOẠI") ? "text-red-400" : proposed.includes("HỒI SINH") ? "text-amber-400" : "text-emerald-400"}>
                                             {proposed}
                                           </span>
                                         </td>
@@ -707,15 +685,7 @@ export default function AdminPage() {
                         <div className="space-y-4">
                           <div className="text-xs uppercase font-mono font-bold text-red-400">
                             💀 BẢNG NGƯỜI CHẾT ({
-                              playerList.filter(p => {
-                                if (!gameState.resultsApplied) {
-                                  return p.status === "dead";
-                                } else {
-                                  const wasEliminated = p.lastAction === "eliminated";
-                                  const wasResurrected = p.lastAction === "resurrected";
-                                  return (p.status === "dead" && !wasEliminated) || wasResurrected;
-                                }
-                              }).length
+                              playerList.filter(p => p.status === "dead").length
                             })
                           </div>
                           <div className="overflow-x-auto font-mono text-xs text-zinc-300">
@@ -726,33 +696,25 @@ export default function AdminPage() {
                                   <th className="py-2 px-2">Tên</th>
                                   <th className="py-2 px-2">Đáp Án</th>
                                   <th className="py-2 px-2 text-right">Tốc Độ</th>
-                                  <th className="py-2 px-2">Dự Kiến</th>
+                                  <th className="py-2 px-2">Trạng Thái</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {(() => {
-                                  const deadBeforeRound = playerList.filter(p => {
-                                    if (!gameState.resultsApplied) {
-                                      return p.status === "dead";
-                                    } else {
-                                      const wasEliminated = p.lastAction === "eliminated";
-                                      const wasResurrected = p.lastAction === "resurrected";
-                                      return (p.status === "dead" && !wasEliminated) || wasResurrected;
-                                    }
-                                  });
-
-                                  return sortPlayersForRound(deadBeforeRound, correctAnswer).map((p, idx) => {
+                                  const deadPlayers = playerList.filter(p => p.status === "dead");
+                                  return sortPlayersForRound(deadPlayers, correctAnswer).map((p, idx) => {
                                     const isCorrect = p.answer === correctAnswer;
                                     const answered = p.answer !== null && p.answer !== undefined;
 
-                                    let proposed = "💀 Chết";
-                                    if (gameState.resultsCalculated) {
+                                    let proposed = "💀 TIẾP TỤC BỊ LOẠI";
+                                    if (!gameState.resultsApplied) {
                                       if (gameState.pendingResurrections?.includes(p.name)) {
-                                        proposed = "🎉 Hồi Sinh";
+                                        proposed = "🎉 DỰ KIẾN HỒI SINH";
                                       }
-                                    }
-                                    if (gameState.resultsApplied) {
-                                      proposed = p.status === "alive" ? "🎉 Hồi Sinh" : "💀 Chết";
+                                    } else {
+                                      if (p.lastAction === "eliminated") {
+                                        proposed = "💀 ĐÃ BỊ LOẠI";
+                                      }
                                     }
 
                                     return (
@@ -776,7 +738,7 @@ export default function AdminPage() {
                                             : "-"}
                                         </td>
                                         <td className="py-2 px-2 font-bold">
-                                          <span className={proposed.includes("🎉") ? "text-amber-400" : "text-zinc-500"}>
+                                          <span className={proposed.includes("HỒI SINH") ? "text-amber-400" : proposed === "💀 ĐÃ BỊ LOẠI" ? "text-red-500" : "text-zinc-500"}>
                                             {proposed}
                                           </span>
                                         </td>

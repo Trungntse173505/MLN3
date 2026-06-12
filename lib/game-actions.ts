@@ -128,14 +128,13 @@ async function resetAllAnswers() {
       if (isAllowed) {
         updates[`players/${key}/answer`] = null;
         updates[`players/${key}/answerTime`] = null;
-        if (player.lastAction === "resurrected") {
-          // Keep resurrected status so player UI knows they were resurrected
-        } else {
-          updates[`players/${key}/lastAction`] = "waiting";
-        }
+        updates[`players/${key}/lastResult`] = null;
+        updates[`players/${key}/lastAction`] = "waiting";
       } else {
         updates[`players/${key}/answer`] = null;
         updates[`players/${key}/answerTime`] = null;
+        updates[`players/${key}/lastResult`] = null;
+        updates[`players/${key}/lastAction`] = null;
       }
     }
   });
@@ -357,7 +356,10 @@ export async function applyRoundResults() {
   await update(stateRef, {
     resultsApplied: true,
     eliminatedThisRound: eliminatedNames.length > 0 ? eliminatedNames : null,
-    resurrectedThisRound: pendingResurrect.length > 0 ? pendingResurrect : null
+    resurrectedThisRound: pendingResurrect.length > 0 ? pendingResurrect : null,
+    pendingEliminations: null,
+    pendingAdditionalEliminations: null,
+    pendingResurrections: null
   });
 }
 
