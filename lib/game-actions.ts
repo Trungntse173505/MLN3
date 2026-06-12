@@ -20,11 +20,17 @@ export async function resetGame() {
     eliminatedThisRound: null,
     resurrectedThisRound: null,
     winnersThisRound: null,
-    eliminationQuota: 5,
-    winnerSlotsRemaining: 3,
+    eliminationQuota: null,
+    winnerSlotsRemaining: null,
     survivalContestants: null,
     onlyOneWinnerPerQuestion: false,
-    finalRound: false
+    finalRound: false,
+    resultsCalculated: false,
+    resultsApplied: false,
+    additionalEliminationCount: 0,
+    pendingEliminations: null,
+    pendingAdditionalEliminations: null,
+    pendingResurrections: null
   });
 
   const playersRef = ref(db, "players");
@@ -86,11 +92,17 @@ export async function startGame() {
     eliminatedThisRound: null,
     resurrectedThisRound: null,
     winnersThisRound: null,
-    eliminationQuota: 5,
-    winnerSlotsRemaining: 3,
+    eliminationQuota: null,
+    winnerSlotsRemaining: null,
     survivalContestants: null,
     onlyOneWinnerPerQuestion: false,
-    finalRound: false
+    finalRound: false,
+    resultsCalculated: false,
+    resultsApplied: false,
+    additionalEliminationCount: 0,
+    pendingEliminations: null,
+    pendingAdditionalEliminations: null,
+    pendingResurrections: null
   });
   await resetAllAnswers();
 }
@@ -100,8 +112,6 @@ async function resetAllAnswers() {
   const stateRef = ref(db, "gameState");
   const stateSnap = await get(stateRef);
   if (!stateSnap.exists()) return;
-  const state = stateSnap.val();
-  const mode = state.mode || "normal";
 
   const playersRef = ref(db, "players");
   const snapshot = await get(playersRef);
@@ -113,12 +123,7 @@ async function resetAllAnswers() {
     const player = child.val();
     if (key) {
       const status = player.status || "alive";
-      // Determine if player is allowed to answer
-      const isContestant = state.survivalContestants 
-        ? (state.survivalContestants.includes(player.name) || state.survivalContestants.includes(key))
-        : true;
-      const isAllowed = (mode === "normal" && (status === "alive" || status === "dead")) ||
-                        (mode === "survival" && status === "alive" && isContestant);
+      const isAllowed = status === "alive" || status === "dead";
 
       if (isAllowed) {
         updates[`players/${key}/answer`] = null;
@@ -131,9 +136,6 @@ async function resetAllAnswers() {
       } else {
         updates[`players/${key}/answer`] = null;
         updates[`players/${key}/answerTime`] = null;
-        if (status === "winner") {
-          updates[`players/${key}/lastAction`] = "winner_locked";
-        }
       }
     }
   });
@@ -157,14 +159,8 @@ export async function submitAnswer(name: string, answer: boolean) {
 
   if (state.phase !== "question") return;
 
-  const mode = state.mode || "normal";
   const status = player.status || "alive";
-
-  const isContestant = state.survivalContestants 
-    ? (state.survivalContestants.includes(player.name) || state.survivalContestants.includes(sanitized))
-    : true;
-  const isAllowed = (mode === "normal" && (status === "alive" || status === "dead")) ||
-                    (mode === "survival" && status === "alive" && isContestant);
+  const isAllowed = status === "alive" || status === "dead";
 
   if (!isAllowed) return;
 
@@ -199,14 +195,13 @@ export async function setFinalRound(active: boolean) {
   });
 }
 
-// Reveal answer and handle resurrection
+// Reveal answer and calculate pending results
 export async function revealAnswer() {
   const stateRef = ref(db, "gameState");
   const stateSnap = await get(stateRef);
   if (!stateSnap.exists()) return;
 
   const state: GameState = stateSnap.val();
-  const mode = state.mode || "normal";
   const currentQ = questions.find(q => q.id === state.activeQuestionId) || questions[state.currentQuestion - 1];
   if (!currentQ) return;
 
@@ -217,234 +212,112 @@ export async function revealAnswer() {
   const playersList = Object.values(players);
   const correctAnswer = currentQ.answer;
 
-  // 1. Create Snapshots BEFORE any state changes
-  const aliveBefore = playersList.filter(p => p.status === "alive");
-  const deadBefore = playersList.filter(p => p.status === "dead");
-  const winnersBefore = playersList.filter(p => p.status === "winner");
+  const alivePlayers = playersList.filter(p => p.status === "alive");
+  const deadPlayers = playersList.filter(p => p.status === "dead");
 
-  const aliveCorrect = aliveBefore.filter(p => p.answer === correctAnswer);
-  const aliveWrong = aliveBefore.filter(p => p.answer !== correctAnswer);
-  const deadCorrectCandidates = deadBefore.filter(p => p.answer === correctAnswer && p.answerTime != null);
-
-  let eliminatedNames: string[] = [];
-  let resurrectedNames: string[] = [];
-  let winnerNames: string[] = [];
-  let newPhase: GamePhase = "reveal";
-  let newMode: GameMode = mode;
-  let newResurrectionCount = state.resurrectionCount;
-  let newOnlyOneWinnerPerQuestion = state.onlyOneWinnerPerQuestion || false;
-  let newSurvivalContestants: string[] | null = state.survivalContestants ? [...state.survivalContestants] : null;
-
-  const dbUpdates: Record<string, any> = {};
-
-  if (mode === "normal") {
-    if (aliveBefore.length > 5) {
-      if (aliveCorrect.length <= 3) {
-        // COLLAPSE BRANCH!
-        if (aliveCorrect.length === 3) {
-          // Section 5: 3 winners, game finished, ignore resurrection
-          winnerNames = aliveCorrect.map(p => p.name);
-          eliminatedNames = aliveWrong.map(p => p.name);
-          newPhase = "finished";
-          newResurrectionCount = 0;
-          newSurvivalContestants = null;
-        } else {
-          // Sections 6, 7, 8
-          winnerNames = aliveCorrect.map(p => p.name);
-
-          // Calculate resurrection
-          if (state.resurrectionCount > 0) {
-            const sortedDeadCandidates = [...deadCorrectCandidates].sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
-            const toResurrect = sortedDeadCandidates.slice(0, state.resurrectionCount);
-            resurrectedNames = toResurrect.map(p => p.name);
-          }
-
-          const aliveWrongNames = aliveWrong.map(p => p.name);
-          newSurvivalContestants = Array.from(new Set([...aliveWrongNames, ...resurrectedNames]));
-          newMode = "survival";
-          newResurrectionCount = 0;
-          newPhase = "reveal";
-
-          if (aliveCorrect.length === 0) {
-            // Special rule for 0 correct
-            newOnlyOneWinnerPerQuestion = true;
-          }
-        }
-      } else {
-        // Standard normal mode elimination quota
-        const eliminationQuota = state.currentQuestion === 1 ? 5 : 2;
-        let toEliminateList: Player[] = [...aliveWrong];
-
-        if (toEliminateList.length < eliminationQuota) {
-          const correctAliveSortedBySlowest = [...aliveCorrect].sort((a, b) => {
-            const timeA = a.answerTime || 0;
-            const timeB = b.answerTime || 0;
-            return timeB - timeA;
-          });
-          const needed = eliminationQuota - toEliminateList.length;
-          const additional = correctAliveSortedBySlowest.slice(0, needed);
-          toEliminateList = [...toEliminateList, ...additional];
-        }
-
-        eliminatedNames = toEliminateList.map(p => p.name);
-
-        if (state.resurrectionCount > 0) {
-          const sortedDeadCandidates = [...deadCorrectCandidates].sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
-          const toResurrect = sortedDeadCandidates.slice(0, state.resurrectionCount);
-          resurrectedNames = toResurrect.map(p => p.name);
-        }
-        newPhase = "reveal";
-      }
-    } else {
-      // aliveBefore.length <= 5 but mode === "normal"
-      const eliminationQuota = state.currentQuestion === 1 ? 5 : 2;
-      let toEliminateList: Player[] = [...aliveWrong];
-
-      if (toEliminateList.length < eliminationQuota) {
-        const correctAliveSortedBySlowest = [...aliveCorrect].sort((a, b) => {
-          const timeA = a.answerTime || 0;
-          const timeB = b.answerTime || 0;
-          return timeB - timeA;
-        });
-        const needed = eliminationQuota - toEliminateList.length;
-        const additional = correctAliveSortedBySlowest.slice(0, needed);
-        toEliminateList = [...toEliminateList, ...additional];
-      }
-
-      eliminatedNames = toEliminateList.map(p => p.name);
-
-      if (state.resurrectionCount > 0) {
-        const sortedDeadCandidates = [...deadCorrectCandidates].sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
-        const toResurrect = sortedDeadCandidates.slice(0, state.resurrectionCount);
-        resurrectedNames = toResurrect.map(p => p.name);
-      }
-      newPhase = "reveal";
+  // 1. Calculate pending eliminations (alive players who answered wrong or didn't answer)
+  const pendingEliminations: string[] = [];
+  alivePlayers.forEach(p => {
+    const isCorrect = p.answer === correctAnswer;
+    const answered = p.answer !== null && p.answer !== undefined;
+    if (!isCorrect || !answered) {
+      pendingEliminations.push(p.name);
     }
-  } else {
-    // mode === "survival"
-    const contestants = aliveBefore.filter(p => !state.survivalContestants || state.survivalContestants.includes(p.name));
-    const winnerCount = winnersBefore.length;
-    const slotsRemaining = 3 - winnerCount;
+  });
 
-    const correctContestants = contestants.filter(p => p.answer === correctAnswer);
-    const wrongContestants = contestants.filter(p => p.answer !== correctAnswer);
-    const correctContestantsSortedByTimeAsc = [...correctContestants].sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
-
-    if (newOnlyOneWinnerPerQuestion) {
-      // Special 1 winner per question logic (Section 9)
-      if (correctContestants.length === 0) {
-        winnerNames = [];
-        eliminatedNames = [];
-        newPhase = "reveal";
-      } else {
-        const fastestWinner = correctContestantsSortedByTimeAsc[0];
-        winnerNames = [fastestWinner.name];
-        eliminatedNames = wrongContestants.map(p => p.name);
-
-        const correctSlowerNames = correctContestantsSortedByTimeAsc.slice(1).map(p => p.name);
-        newSurvivalContestants = Array.from(new Set(correctSlowerNames));
-
-        const remainingSlots = slotsRemaining - 1;
-        newPhase = remainingSlots <= 0 ? "finished" : "reveal";
-      }
-    } else if (winnerCount === 0 && contestants.length === 5) {
-      // Classic Top 5 survival mode case (Case A)
-      if (correctContestants.length === 5) {
-        const slowest = correctContestantsSortedByTimeAsc[4];
-        eliminatedNames = [slowest.name];
-        winnerNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = contestants.filter(p => p.name !== slowest.name).map(p => p.name);
-      } else if (correctContestants.length === 4) {
-        eliminatedNames = wrongContestants.map(p => p.name);
-        winnerNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = correctContestants.map(p => p.name);
-      } else if (correctContestants.length === 3) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = wrongContestants.map(p => p.name);
-        newPhase = "finished";
-        newSurvivalContestants = [];
-      } else if (correctContestants.length === 2) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = wrongContestants.map(p => p.name);
-      } else if (correctContestants.length === 1) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = wrongContestants.map(p => p.name);
-      } else {
-        winnerNames = [];
-        eliminatedNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = contestants.map(p => p.name);
-      }
-    } else if (winnerCount === 0 && contestants.length === 4) {
-      // Classic Top 4 survival mode case (Case A)
-      if (correctContestants.length === 4) {
-        const slowest = correctContestantsSortedByTimeAsc[3];
-        eliminatedNames = [slowest.name];
-        winnerNames = correctContestantsSortedByTimeAsc.slice(0, 3).map(p => p.name);
-        newPhase = "finished";
-        newSurvivalContestants = [];
-      } else if (correctContestants.length === 3) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = wrongContestants.map(p => p.name);
-        newPhase = "finished";
-        newSurvivalContestants = [];
-      } else if (correctContestants.length === 2) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = wrongContestants.map(p => p.name);
-      } else if (correctContestants.length === 1) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = wrongContestants.map(p => p.name);
-      } else {
-        winnerNames = [];
-        eliminatedNames = [];
-        newPhase = "reveal";
-        newSurvivalContestants = contestants.map(p => p.name);
-      }
-    } else {
-      // General cases: Section 10
-      if (correctContestants.length === 0) {
-        winnerNames = [];
-        eliminatedNames = [];
-        newPhase = "reveal";
-      } else if (correctContestants.length < slotsRemaining) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = wrongContestants.map(p => p.name);
-        newPhase = "reveal";
-        newSurvivalContestants = [];
-      } else if (correctContestants.length === slotsRemaining) {
-        winnerNames = correctContestants.map(p => p.name);
-        eliminatedNames = wrongContestants.map(p => p.name);
-        newPhase = "finished";
-        newSurvivalContestants = [];
-      } else {
-        const winners = correctContestantsSortedByTimeAsc.slice(0, slotsRemaining);
-        winnerNames = winners.map(p => p.name);
-        eliminatedNames = wrongContestants.map(p => p.name);
-        newPhase = "finished";
-        newSurvivalContestants = [];
-      }
+  // 2. Calculate pending resurrection (Q2+ only, max 1 dead player who answered correct and fastest)
+  const pendingResurrections: string[] = [];
+  if (state.currentQuestion > 1) {
+    const deadCorrectCandidates = deadPlayers.filter(
+      p => p.answer === correctAnswer && p.answerTime != null
+    );
+    // Sort by answerTime asc (fastest first)
+    deadCorrectCandidates.sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
+    if (deadCorrectCandidates.length > 0) {
+      pendingResurrections.push(deadCorrectCandidates[0].name);
     }
   }
 
-  // Apply DB updates
+  await update(stateRef, {
+    phase: "reveal" as GamePhase,
+    resultsCalculated: true,
+    resultsApplied: false,
+    additionalEliminationCount: 0,
+    pendingEliminations,
+    pendingAdditionalEliminations: [],
+    pendingResurrections,
+    eliminatedThisRound: null,
+    resurrectedThisRound: null,
+    winnersThisRound: null
+  });
+}
+
+// Select additional slow correct alive players to eliminate
+export async function setAdditionalEliminationCount(count: number) {
+  const stateRef = ref(db, "gameState");
+  const stateSnap = await get(stateRef);
+  if (!stateSnap.exists()) return;
+
+  const state: GameState = stateSnap.val();
+  const currentQ = questions.find(q => q.id === state.activeQuestionId) || questions[state.currentQuestion - 1];
+  if (!currentQ) return;
+
+  const playersRef = ref(db, "players");
+  const playersSnap = await get(playersRef);
+  const players: Record<string, Player> = playersSnap.exists() ? playersSnap.val() : {};
+
+  const playersList = Object.values(players);
+  const correctAnswer = currentQ.answer;
+
+  const aliveCorrect = playersList.filter(
+    p => p.status === "alive" && p.answer === correctAnswer && p.answerTime != null
+  );
+
+  // Sort by answerTime desc (slowest first)
+  aliveCorrect.sort((a, b) => (b.answerTime || 0) - (a.answerTime || 0));
+
+  // Limit count to correct alive players length
+  const finalCount = Math.max(0, Math.min(count, aliveCorrect.length));
+  const pendingAdditionalEliminations = aliveCorrect.slice(0, finalCount).map(p => p.name);
+
+  await update(stateRef, {
+    additionalEliminationCount: finalCount,
+    pendingAdditionalEliminations
+  });
+}
+
+// Confirm round results: apply pending results to database
+export async function applyRoundResults() {
+  const stateRef = ref(db, "gameState");
+  const stateSnap = await get(stateRef);
+  if (!stateSnap.exists()) return;
+
+  const state: GameState = stateSnap.val();
+  if (!state.resultsCalculated || state.resultsApplied) return;
+
+  const currentQ = questions.find(q => q.id === state.activeQuestionId) || questions[state.currentQuestion - 1];
+  if (!currentQ) return;
+  const correctAnswer = currentQ.answer;
+
+  const playersRef = ref(db, "players");
+  const playersSnap = await get(playersRef);
+  const players: Record<string, Player> = playersSnap.exists() ? playersSnap.val() : {};
+  const playersList = Object.values(players);
+
+  const pendingElim = state.pendingEliminations || [];
+  const pendingAddElim = state.pendingAdditionalEliminations || [];
+  const pendingResurrect = state.pendingResurrections || [];
+
+  const dbUpdates: Record<string, any> = {};
+
   playersList.forEach(p => {
     const sanitized = sanitizeKey(p.name);
-    
     let newStatus = p.status;
+    let lastAction = p.lastAction || "waiting";
     let lastResult: "correct" | "wrong" | "no_answer" = "no_answer";
-    let lastAction: "waiting" | "survived" | "eliminated" | "resurrected" | "winner_locked" = "waiting";
 
-    if (p.answer === null) {
+    // Set lastResult
+    if (p.answer === null || p.answer === undefined) {
       lastResult = "no_answer";
     } else if (p.answer === correctAnswer) {
       lastResult = "correct";
@@ -455,82 +328,53 @@ export async function revealAnswer() {
     if (p.status === "winner") {
       newStatus = "winner";
       lastAction = "winner_locked";
-      lastResult = "correct";
-    } else if (winnerNames.includes(p.name)) {
-      newStatus = "winner";
-      lastAction = "winner_locked";
-    } else if (eliminatedNames.includes(p.name)) {
+    } else if (pendingElim.includes(p.name) || pendingAddElim.includes(p.name)) {
       newStatus = "dead";
       lastAction = "eliminated";
-    } else if (resurrectedNames.includes(p.name)) {
+    } else if (pendingResurrect.includes(p.name)) {
       newStatus = "alive";
       lastAction = "resurrected";
     } else if (p.status === "alive") {
-      if (newPhase === "finished") {
-        newStatus = "dead";
-        lastAction = "eliminated";
-      } else {
-        newStatus = "alive";
-        lastAction = "survived";
-      }
+      newStatus = "alive";
+      lastAction = "survived";
     } else {
       newStatus = "dead";
       lastAction = "waiting";
     }
 
     dbUpdates[`players/${sanitized}/status`] = newStatus;
-    dbUpdates[`players/${sanitized}/lastResult`] = lastResult;
     dbUpdates[`players/${sanitized}/lastAction`] = lastAction;
+    dbUpdates[`players/${sanitized}/lastResult`] = lastResult;
   });
 
   if (Object.keys(dbUpdates).length > 0) {
     await update(ref(db), dbUpdates);
   }
 
-  const updatedWinnerCount = playersList.filter(p => dbUpdates[`players/${sanitizeKey(p.name)}/status`] === "winner").length;
-  const winnerSlotsRemaining = 3 - updatedWinnerCount;
+  // Combine eliminated names for record
+  const eliminatedNames = [...pendingElim, ...pendingAddElim];
 
   await update(stateRef, {
-    phase: newPhase,
-    mode: newMode,
-    resurrectionCount: newResurrectionCount,
-    onlyOneWinnerPerQuestion: newOnlyOneWinnerPerQuestion,
-    survivalContestants: newSurvivalContestants,
+    resultsApplied: true,
     eliminatedThisRound: eliminatedNames.length > 0 ? eliminatedNames : null,
-    resurrectedThisRound: resurrectedNames.length > 0 ? resurrectedNames : null,
-    winnersThisRound: winnerNames.length > 0 ? winnerNames : null,
-    winnerSlotsRemaining
+    resurrectedThisRound: pendingResurrect.length > 0 ? pendingResurrect : null
   });
 }
 
-// Advance to next question
+// Advance to next question manually
 export async function nextQuestion(difficulty: "easy" | "medium" | "hard" = "easy") {
   const stateRef = ref(db, "gameState");
   const stateSnap = await get(stateRef);
   if (!stateSnap.exists()) return;
 
   const state: GameState = stateSnap.val();
-  
-  const playersRef = ref(db, "players");
-  const playersSnap = await get(playersRef);
-  const players: Record<string, Player> = playersSnap.exists() ? playersSnap.val() : {};
-  const playersList = Object.values(players);
-  const winnerCount = playersList.filter(p => p.status === "winner").length;
-  
-  if (winnerCount >= 3) {
-    await update(stateRef, {
-      phase: "finished" as GamePhase
-    });
-    return;
-  }
 
+  // If question list is exhausted, do not automatically finish game.
+  // Instead, the Admin has to click KẾT THÚC GAME.
   const usedIds: Record<string, boolean> = state.usedQuestionIds || {};
   const usedCount = Object.keys(usedIds).length;
 
   if (usedCount >= questions.length) {
-    await update(stateRef, {
-      phase: "finished" as GamePhase
-    });
     return;
   }
 
@@ -540,9 +384,6 @@ export async function nextQuestion(difficulty: "easy" | "medium" | "hard" = "eas
   }
 
   if (availableQuestions.length === 0) {
-    await update(stateRef, {
-      phase: "finished" as GamePhase
-    });
     return;
   }
 
@@ -552,48 +393,66 @@ export async function nextQuestion(difficulty: "easy" | "medium" | "hard" = "eas
   const updatedUsedIds = { ...usedIds, [nextQuestionObj.id]: true };
   const nextRound = state.currentQuestion + 1;
 
-  const aliveCount = playersList.filter(p => p.status === "alive").length;
-  
-  let newMode: GameMode = state.mode || "normal";
-  let newResurrectionCount = state.resurrectionCount;
-  let survivalContestants = state.survivalContestants || null;
+  await update(stateRef, {
+    phase: "question" as GamePhase,
+    mode: "normal" as GameMode,
+    currentQuestion: nextRound,
+    activeQuestionId: nextQuestionObj.id,
+    questionStartTime: serverTimestamp(),
+    usedQuestionIds: updatedUsedIds,
+    
+    // Clear all round details and pending fields
+    resultsCalculated: false,
+    resultsApplied: false,
+    additionalEliminationCount: 0,
+    pendingEliminations: null,
+    pendingAdditionalEliminations: null,
+    pendingResurrections: null,
+    eliminatedThisRound: null,
+    resurrectedThisRound: null,
+    winnersThisRound: null,
+    survivalContestants: null
+  });
 
-  if (state.mode === "survival") {
-    newMode = "survival";
-    newResurrectionCount = 0;
-    if (!survivalContestants) {
-      survivalContestants = playersList.filter(p => p.status === "alive").map(p => p.name);
-    }
-  } else {
-    if (aliveCount <= 5) {
-      newMode = "survival";
-      newResurrectionCount = 0;
-      survivalContestants = playersList.filter(p => p.status === "alive").map(p => p.name);
-    } else {
-      newMode = "normal";
-      survivalContestants = null;
-    }
-  }
-
-  if (nextRound > questions.length) {
-    await update(stateRef, {
-      phase: "finished" as GamePhase
-    });
-  } else {
-    await update(stateRef, {
-      phase: "question" as GamePhase,
-      mode: newMode,
-      currentQuestion: nextRound,
-      activeQuestionId: nextQuestionObj.id,
-      resurrectionCount: newResurrectionCount,
-      eliminatedThisRound: null,
-      resurrectedThisRound: null,
-      winnersThisRound: null,
-      questionStartTime: serverTimestamp(),
-      usedQuestionIds: updatedUsedIds,
-      survivalContestants: survivalContestants
-    });
-    await resetAllAnswers();
-  }
+  await resetAllAnswers();
 }
+
+// Finish the game: make remaining alive players winners
+export async function finishGame() {
+  const stateRef = ref(db, "gameState");
+  const playersRef = ref(db, "players");
+
+  const playersSnap = await get(playersRef);
+  const players: Record<string, Player> = playersSnap.exists() ? playersSnap.val() : {};
+  const playersList = Object.values(players);
+
+  const dbUpdates: Record<string, any> = {};
+
+  playersList.forEach(p => {
+    const sanitized = sanitizeKey(p.name);
+    if (p.status === "alive") {
+      dbUpdates[`players/${sanitized}/status`] = "winner" as PlayerStatus;
+      dbUpdates[`players/${sanitized}/lastAction`] = "winner_locked";
+    }
+  });
+
+  if (Object.keys(dbUpdates).length > 0) {
+    await update(ref(db), dbUpdates);
+  }
+
+  await update(stateRef, {
+    phase: "finished" as GamePhase,
+    resultsCalculated: false,
+    resultsApplied: false,
+    additionalEliminationCount: 0,
+    pendingEliminations: null,
+    pendingAdditionalEliminations: null,
+    pendingResurrections: null,
+    eliminatedThisRound: null,
+    resurrectedThisRound: null,
+    winnersThisRound: null,
+    survivalContestants: null
+  });
+}
+
 

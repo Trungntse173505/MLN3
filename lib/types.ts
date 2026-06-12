@@ -33,5 +33,11 @@ export interface GameState {
   survivalContestants?: string[] | null;
   onlyOneWinnerPerQuestion?: boolean;
   finalRound?: boolean; // legacy compatibility
+  pendingEliminations?: string[] | null;
+  pendingAdditionalEliminations?: string[] | null;
+  pendingResurrections?: string[] | null;
+  resultsCalculated?: boolean;
+  resultsApplied?: boolean;
+  additionalEliminationCount?: number;
 }
 

@@ -66,7 +66,9 @@ export default function ProjectorPage() {
   // Calculate top 5 dead players who answered correctly for the current question
   let leaderboardEntries: LeaderboardEntry[] = [];
   if (gameState.phase === "reveal" && currentQ) {
-    const resurrectedNames = gameState.resurrectedThisRound || [];
+    const resurrectedNames = gameState.resultsApplied
+      ? (gameState.resurrectedThisRound || [])
+      : (gameState.pendingResurrections || []);
     const correctDeadPlayers = playerList
       .filter((p) => {
         const wasDead = p.status === "dead" || resurrectedNames.includes(p.name);
@@ -262,39 +264,72 @@ export default function ProjectorPage() {
 
                 {gameState.mode === "normal" ? (
                   <>
+                    {/* Status header banner */}
+                    <div className="text-center mb-6">
+                      <span className={`inline-block px-4 py-1.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider ${
+                        gameState.resultsApplied
+                          ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                          : "bg-amber-500/10 border border-amber-500/30 text-[#f59e0b] animate-pulse"
+                      }`}>
+                        {gameState.resultsApplied 
+                          ? "KẾT QUẢ CHÍNH THỨC" 
+                          : "KẾT QUẢ DỰ KIẾN — CHỜ ADMIN XÁC NHẬN"}
+                      </span>
+                    </div>
+
                     {/* Hồi sinh và loại ở Vòng Thường */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
                       {/* Bị loại */}
-                      <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-2">
-                        <div className="text-xs uppercase font-mono font-bold text-red-400">💀 Bị Loại Vòng Này ({gameState.eliminatedThisRound?.length || 0})</div>
-                        {gameState.eliminatedThisRound && gameState.eliminatedThisRound.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {gameState.eliminatedThisRound.map(name => (
-                              <span key={name} className="px-2.5 py-1 text-xs rounded bg-red-500/10 border border-red-500/20 text-red-300 font-medium">
-                                {name}
-                              </span>
-                            ))}
+                      {(() => {
+                        const elimList = gameState.resultsApplied
+                          ? (gameState.eliminatedThisRound || [])
+                          : [...(gameState.pendingEliminations || []), ...(gameState.pendingAdditionalEliminations || [])];
+
+                        return (
+                          <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-2">
+                            <div className="text-xs uppercase font-mono font-bold text-red-400">
+                              💀 {gameState.resultsApplied ? "Bị Loại Vòng Này" : "Dự Kiến Bị Loại"} ({elimList.length})
+                            </div>
+                            {elimList.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {elimList.map(name => (
+                                  <span key={name} className="px-2.5 py-1 text-xs rounded bg-red-500/10 border border-red-500/20 text-red-300 font-medium">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-zinc-500 font-mono italic">Không có ai bị loại.</p>
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-xs text-zinc-500 font-mono italic">Không có ai bị loại.</p>
-                        )}
-                      </div>
+                        );
+                      })()}
 
                       {/* Hồi sinh */}
-                      <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 space-y-2">
-                        <div className="text-xs uppercase font-mono font-bold text-emerald-400">🎉 Hồi Sinh Vòng Này ({gameState.resurrectedThisRound?.length || 0})</div>
-                        {gameState.resurrectedThisRound && gameState.resurrectedThisRound.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {gameState.resurrectedThisRound.map(name => (
-                              <span key={name} className="px-2.5 py-1 text-xs rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
-                                {name}
-                              </span>
-                            ))}
+                      {(() => {
+                        const resurrectList = gameState.resultsApplied
+                          ? (gameState.resurrectedThisRound || [])
+                          : (gameState.pendingResurrections || []);
+
+                        return (
+                          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 space-y-2">
+                            <div className="text-xs uppercase font-mono font-bold text-emerald-400">
+                              🎉 {gameState.resultsApplied ? "Hồi Sinh Vòng Này" : "Dự Kiến Hồi Sinh"} ({resurrectList.length})
+                            </div>
+                            {resurrectList.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {resurrectList.map(name => (
+                                  <span key={name} className="px-2.5 py-1 text-xs rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-zinc-500 font-mono italic">Không có ai được hồi sinh.</p>
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-xs text-zinc-500 font-mono italic">Không có ai được hồi sinh.</p>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="pt-2">

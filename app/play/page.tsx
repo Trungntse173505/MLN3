@@ -352,7 +352,15 @@ export default function PlayPage() {
             </GlassCard>
 
             {/* Check personal status */}
-            {playerData.status === "winner" ? (
+            {!gameState.resultsApplied ? (
+              <div className="text-center p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[#f59e0b] space-y-3">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-[#f59e0b] animate-pulse">
+                  <ShieldCheck size={20} />
+                </div>
+                <h3 className="font-bold text-sm">Đã ghi nhận kết quả.</h3>
+                <p className="text-xs text-zinc-400">Đang chờ Admin xác nhận vòng chơi.</p>
+              </div>
+            ) : playerData.status === "winner" ? (
               <div className="text-center p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 glow-gold space-y-3">
                 <div className="text-2xl">🏆 ⭐ 🏆</div>
                 <h3 className="font-bold text-amber-400 text-lg">CHẮC SUẤT CHIẾN THẮNG!</h3>

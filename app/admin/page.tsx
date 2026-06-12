@@ -11,7 +11,10 @@ import {
   markPlayerStatus,
   setResurrectionCount,
   setFinalRound,
-  sanitizeKey
+  sanitizeKey,
+  setAdditionalEliminationCount,
+  applyRoundResults,
+  finishGame
 } from "../../lib/game-actions";
 import { GameState, Player, GameMode, PlayerStatus } from "../../lib/types";
 import { questions } from "../../lib/questions";
@@ -33,8 +36,21 @@ import {
   EyeSlash,
   LockKey,
   LockOpen,
-  Trophy
+  Trophy,
+  ShieldCheck
 } from "@phosphor-icons/react";
+
+// Helper function to sort players based on correctness and speed
+const sortPlayersForRound = (list: Player[], correctAnswer: boolean) => {
+  const correct = list.filter(p => p.answer === correctAnswer && p.answerTime != null);
+  const wrong = list.filter(p => p.answer !== correctAnswer && p.answer !== null && p.answer !== undefined);
+  const noAnswer = list.filter(p => p.answer === null || p.answer === undefined);
+
+  // Sort correct by answerTime asc
+  correct.sort((a, b) => (a.answerTime || 0) - (b.answerTime || 0));
+
+  return [...correct, ...wrong, ...noAnswer];
+};
 
 export default function AdminPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -114,6 +130,44 @@ export default function AdminPage() {
     }
   };
 
+  const handleSetAdditionalElimCount = async (count: number) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await setAdditionalEliminationCount(count);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyRoundResults = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await applyRoundResults();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinishGame = async () => {
+    if (loading) return;
+    if (confirm("Bạn có chắc chắn muốn KẾT THÚC GAME ngay bây giờ? Tất cả người chơi còn sống sẽ được công bố thắng cuộc.")) {
+      setLoading(true);
+      try {
+        await finishGame();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Subscribe to GameState
   useEffect(() => {
     const stateRef = ref(db, "gameState");
@@ -182,6 +236,7 @@ export default function AdminPage() {
   }).length;
 
   const currentQ = questions.find(q => q.id === gameState.activeQuestionId) || questions[gameState.currentQuestion - 1];
+  const correctAnswer = currentQ?.answer;
 
   // Calculate top 5 dead players who answered correctly for the current question
   let leaderboardEntries: LeaderboardEntry[] = [];
@@ -350,68 +405,53 @@ export default function AdminPage() {
                     <Sliders size={16} className="text-zinc-500" />
                   </div>
 
-                  {gameState.mode === "survival" ? (
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
-                        ⚠️ Hồi sinh đã tự động tắt vì game đã vào Vòng Sinh Tồn.
-                      </div>
-                      
-                      <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 space-y-3">
-                        <div className="text-xs font-mono font-bold text-red-400 uppercase tracking-wide">
-                          🔥 CHI TIẾT THÔNG SỐ VÒNG TRANH SLOT
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-xs font-mono text-zinc-300">
-                          <div>Đã có: <strong className="text-white">{winnerCount} winner</strong></div>
-                          <div>Còn thiếu: <strong className="text-white">{gameState.winnerSlotsRemaining ?? 3} slot</strong></div>
-                          <div className="col-span-2">
-                            Nhóm đang tranh: {gameState.survivalContestants && gameState.survivalContestants.length > 0 ? (
-                              <span className="text-white font-bold">{gameState.survivalContestants.join(", ")}</span>
-                            ) : (
-                              <span className="text-red-400 font-bold">Trống</span>
-                            )}
+                  {/* Additional Elimination controls shown when results calculated but not applied */}
+                  {gameState.phase === "reveal" && gameState.resultsCalculated && !gameState.resultsApplied && (
+                    <div className="space-y-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                      {(() => {
+                        const aliveCorrectCount = playerList.filter(
+                          p => p.status === "alive" && p.answer === correctAnswer && p.answerTime != null
+                        ).length;
+
+                        return (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="space-y-1">
+                              <span className="text-sm font-semibold text-white">
+                                Loại thêm người đúng chậm nhất:
+                              </span>
+                              <p className="text-[10px] text-zinc-500 font-mono">
+                                Đang có {aliveCorrectCount} người sống trả lời đúng.
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleSetAdditionalElimCount((gameState.additionalEliminationCount || 0) - 1)}
+                                disabled={loading || (gameState.additionalEliminationCount || 0) <= 0}
+                                className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center font-mono font-bold text-lg text-amber-500">
+                                {gameState.additionalEliminationCount || 0}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleSetAdditionalElimCount((gameState.additionalEliminationCount || 0) + 1)}
+                                disabled={loading || (gameState.additionalEliminationCount || 0) >= aliveCorrectCount}
+                                className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
-                          {gameState.resurrectedThisRound && gameState.resurrectedThisRound.length > 0 && (
-                            <div className="col-span-2">
-                              Hồi sinh vòng này: <span className="text-emerald-400 font-bold">{gameState.resurrectedThisRound.join(", ")}</span>
-                            </div>
-                          )}
-                          {gameState.eliminatedThisRound && gameState.eliminatedThisRound.length > 0 && (
-                            <div className="col-span-2">
-                              Bị loại vòng này: <span className="text-zinc-500 font-bold">{gameState.eliminatedThisRound.join(", ")}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Resurrection count selector */}
-                      <div className="space-y-2">
-                        <label className="block text-xs font-mono text-zinc-400 uppercase">
-                          Số lượng hồi sinh tối đa mỗi câu
-                        </label>
-                        <div className="flex items-center gap-2">
-                          {[0, 1, 2, 3].map((num) => (
-                            <button
-                              key={num}
-                              onClick={() => handleSetResurrectionCount(num)}
-                              disabled={loading}
-                              className={`px-4 py-2 rounded-full border text-xs font-mono font-bold transition-spring ${
-                                gameState.resurrectionCount === num
-                                  ? "bg-amber-500 text-black border-amber-500"
-                                  : "bg-white/[0.02] border-white/10 text-zinc-400 hover:bg-white/5"
-                              }`}
-                            >
-                              {num}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
                   )}
 
                   {/* Next Question Difficulty Selector (always visible) */}
-                  <div className="space-y-2 pt-4 border-t border-white/5">
+                  <div className="space-y-2">
                     <label className="block text-xs font-mono text-zinc-400 uppercase">
                       Mức độ câu tiếp theo
                     </label>
@@ -434,37 +474,325 @@ export default function AdminPage() {
                   </div>
 
                   {/* Main state transition action buttons */}
-                  <div className="flex gap-4 pt-4 border-t border-white/5">
-                    {gameState.phase === "question" ? (
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/5">
+                    {gameState.phase === "question" && (
                       <PillButton
                         onClick={handleRevealAnswer}
                         variant="primary"
                         disabled={loading}
                         icon={<Eye size={14} />}
-                        className="flex-1 py-4"
+                        className="flex-1 py-4 justify-center"
                       >
-                        Hiện Đáp Án (Hồi sinh)
+                        Công Bố Đáp Án
                       </PillButton>
-                    ) : (
+                    )}
+
+                    {gameState.phase === "reveal" && gameState.resultsCalculated && !gameState.resultsApplied && (
                       <PillButton
-                        onClick={handleNextQuestion}
+                        onClick={handleApplyRoundResults}
                         variant="success"
                         disabled={loading}
-                        icon={<ArrowRight size={14} />}
-                        className="flex-1 py-4"
+                        icon={<ShieldCheck size={14} />}
+                        className="flex-1 py-4 justify-center animate-pulse"
                       >
-                        Chuyển Sang Câu Kế Tiếp
+                        Xác Nhận Kết Quả Vòng
+                      </PillButton>
+                    )}
+
+                    {gameState.phase === "reveal" && gameState.resultsApplied && (
+                      <PillButton
+                        onClick={handleNextQuestion}
+                        variant="primary"
+                        disabled={loading}
+                        icon={<ArrowRight size={14} />}
+                        className="flex-1 py-4 justify-center"
+                      >
+                        Câu Tiếp Theo
+                      </PillButton>
+                    )}
+
+                    {(gameState.phase === "question" || gameState.phase === "reveal") && (
+                      <PillButton
+                        onClick={handleFinishGame}
+                        variant="danger"
+                        disabled={loading}
+                        icon={<Trophy size={14} />}
+                        className="py-4 px-6 justify-center"
+                      >
+                        Kết Thúc Game
                       </PillButton>
                     )}
                   </div>
                 </div>
               </GlassCard>
 
-              {/* Reveal Phase: Show Resurrection Leaderboard (only in normal mode) */}
-              {gameState.phase === "reveal" && gameState.mode === "normal" && (
-                <GlassCard>
-                  <ResurrectionLeaderboard entries={leaderboardEntries} />
-                </GlassCard>
+              {/* Detailed Round Evaluation Tables */}
+              {gameState.phase === "reveal" && (
+                <div className="space-y-6 pt-6 border-t border-white/5 animate-fade-in-up">
+                  <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-amber-400">
+                    Chi tiết phân tích & xếp hạng vòng chơi
+                  </h3>
+
+                  {/* Question 1: Unified Table */}
+                  {gameState.currentQuestion === 1 ? (
+                    <GlassCard>
+                      <div className="space-y-4">
+                        <div className="text-xs uppercase font-mono font-bold text-zinc-400">
+                          Bảng Xếp Hạng Vòng 1 (Toàn Bộ Người Chơi)
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse text-xs font-mono text-zinc-300">
+                            <thead>
+                              <tr className="border-b border-white/10 text-zinc-500 font-bold">
+                                <th className="py-2 px-3">Hạng</th>
+                                <th className="py-2 px-3">Tên</th>
+                                <th className="py-2 px-3">Đáp Án</th>
+                                <th className="py-2 px-3 text-right">Tốc Độ</th>
+                                <th className="py-2 px-3">Trạng Thái</th>
+                                <th className="py-2 px-3">Dự Kiến Sau Vòng</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortPlayersForRound(playerList, correctAnswer).map((p, idx) => {
+                                const isCorrect = p.answer === correctAnswer;
+                                const answered = p.answer !== null && p.answer !== undefined;
+
+                                let proposedStatus = "🟢 Sống Sót";
+                                if (gameState.resultsCalculated) {
+                                  if (gameState.pendingEliminations?.includes(p.name)) {
+                                    proposedStatus = "💀 Dự Kiến Loại (Sai/Chưa trả lời)";
+                                  } else if (gameState.pendingAdditionalEliminations?.includes(p.name)) {
+                                    proposedStatus = "💀 Dự Kiến Loại (Chậm nhất)";
+                                  }
+                                }
+                                if (gameState.resultsApplied) {
+                                  proposedStatus = p.status === "alive" ? "🟢 Sống Sót" : p.status === "winner" ? "🏆 Winner" : "💀 Bị Loại";
+                                }
+
+                                return (
+                                  <tr key={p.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                    <td className="py-2.5 px-3 font-bold text-white">
+                                      {isCorrect ? `${idx + 1}` : "-"}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-semibold text-white">{p.name}</td>
+                                    <td className="py-2.5 px-3">
+                                      {!answered ? (
+                                        <span className="text-zinc-600">Không trả lời</span>
+                                      ) : isCorrect ? (
+                                        <span className="text-emerald-400 font-bold">ĐÚNG</span>
+                                      ) : (
+                                        <span className="text-red-400 font-bold">SAI</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right font-bold">
+                                      {p.answerTime && gameState.questionStartTime 
+                                        ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
+                                        : "-"}
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <StatusBadge status={p.status} />
+                                    </td>
+                                    <td className="py-2.5 px-3 font-bold">
+                                      <span className={
+                                        proposedStatus.includes("🟢") ? "text-emerald-400" :
+                                        proposedStatus.includes("🏆") ? "text-amber-400" : "text-red-400"
+                                      }>
+                                        {proposedStatus}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  ) : (
+                    /* Question 2+: Side-by-Side Tables */
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+                      {/* Alive Table */}
+                      <GlassCard>
+                        <div className="space-y-4">
+                          <div className="text-xs uppercase font-mono font-bold text-emerald-400">
+                            🧍 BẢNG NGƯỜI SỐNG ({
+                              playerList.filter(p => {
+                                if (!gameState.resultsApplied) {
+                                  return p.status === "alive";
+                                } else {
+                                  const wasResurrected = p.lastAction === "resurrected";
+                                  const wasEliminated = p.lastAction === "eliminated";
+                                  return (p.status === "alive" && !wasResurrected) || wasEliminated;
+                                }
+                              }).length
+                            })
+                          </div>
+                          <div className="overflow-x-auto font-mono text-xs text-zinc-300">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-white/10 text-zinc-500 font-bold">
+                                  <th className="py-2 px-2">Hạng</th>
+                                  <th className="py-2 px-2">Tên</th>
+                                  <th className="py-2 px-2">Đáp Án</th>
+                                  <th className="py-2 px-2 text-right">Tốc Độ</th>
+                                  <th className="py-2 px-2">Dự Kiến</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(() => {
+                                  const aliveBeforeRound = playerList.filter(p => {
+                                    if (!gameState.resultsApplied) {
+                                      return p.status === "alive";
+                                    } else {
+                                      const wasResurrected = p.lastAction === "resurrected";
+                                      const wasEliminated = p.lastAction === "eliminated";
+                                      return (p.status === "alive" && !wasResurrected) || wasEliminated;
+                                    }
+                                  });
+
+                                  return sortPlayersForRound(aliveBeforeRound, correctAnswer).map((p, idx) => {
+                                    const isCorrect = p.answer === correctAnswer;
+                                    const answered = p.answer !== null && p.answer !== undefined;
+
+                                    let proposed = "🟢 Sống sót";
+                                    if (gameState.resultsCalculated) {
+                                      if (gameState.pendingEliminations?.includes(p.name)) {
+                                        proposed = "💀 Loại (Sai/Không TL)";
+                                      } else if (gameState.pendingAdditionalEliminations?.includes(p.name)) {
+                                        proposed = "💀 Loại (Chậm)";
+                                      }
+                                    }
+                                    if (gameState.resultsApplied) {
+                                      proposed = p.status === "alive" ? "🟢 Sống sót" : "💀 Bị Loại";
+                                    }
+
+                                    return (
+                                      <tr key={p.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                        <td className="py-2 px-2 font-bold text-white">
+                                          {isCorrect ? `${idx + 1}` : "-"}
+                                        </td>
+                                        <td className="py-2 px-2 font-semibold text-white truncate max-w-[80px]" title={p.name}>{p.name}</td>
+                                        <td className="py-2 px-2">
+                                          {!answered ? (
+                                            <span className="text-zinc-600">N/A</span>
+                                          ) : isCorrect ? (
+                                            <span className="text-emerald-400 font-bold">ĐÚNG</span>
+                                          ) : (
+                                            <span className="text-red-400 font-bold">SAI</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-2 text-right font-bold">
+                                          {p.answerTime && gameState.questionStartTime 
+                                            ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
+                                            : "-"}
+                                        </td>
+                                        <td className="py-2 px-2 font-bold">
+                                          <span className={proposed.includes("🟢") ? "text-emerald-400" : "text-red-400"}>
+                                            {proposed}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  });
+                                })()}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </GlassCard>
+
+                      {/* Dead Table */}
+                      <GlassCard>
+                        <div className="space-y-4">
+                          <div className="text-xs uppercase font-mono font-bold text-red-400">
+                            💀 BẢNG NGƯỜI CHẾT ({
+                              playerList.filter(p => {
+                                if (!gameState.resultsApplied) {
+                                  return p.status === "dead";
+                                } else {
+                                  const wasEliminated = p.lastAction === "eliminated";
+                                  const wasResurrected = p.lastAction === "resurrected";
+                                  return (p.status === "dead" && !wasEliminated) || wasResurrected;
+                                }
+                              }).length
+                            })
+                          </div>
+                          <div className="overflow-x-auto font-mono text-xs text-zinc-300">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-white/10 text-zinc-500 font-bold">
+                                  <th className="py-2 px-2">Hạng</th>
+                                  <th className="py-2 px-2">Tên</th>
+                                  <th className="py-2 px-2">Đáp Án</th>
+                                  <th className="py-2 px-2 text-right">Tốc Độ</th>
+                                  <th className="py-2 px-2">Dự Kiến</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(() => {
+                                  const deadBeforeRound = playerList.filter(p => {
+                                    if (!gameState.resultsApplied) {
+                                      return p.status === "dead";
+                                    } else {
+                                      const wasEliminated = p.lastAction === "eliminated";
+                                      const wasResurrected = p.lastAction === "resurrected";
+                                      return (p.status === "dead" && !wasEliminated) || wasResurrected;
+                                    }
+                                  });
+
+                                  return sortPlayersForRound(deadBeforeRound, correctAnswer).map((p, idx) => {
+                                    const isCorrect = p.answer === correctAnswer;
+                                    const answered = p.answer !== null && p.answer !== undefined;
+
+                                    let proposed = "💀 Chết";
+                                    if (gameState.resultsCalculated) {
+                                      if (gameState.pendingResurrections?.includes(p.name)) {
+                                        proposed = "🎉 Hồi Sinh";
+                                      }
+                                    }
+                                    if (gameState.resultsApplied) {
+                                      proposed = p.status === "alive" ? "🎉 Hồi Sinh" : "💀 Chết";
+                                    }
+
+                                    return (
+                                      <tr key={p.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                        <td className="py-2 px-2 font-bold text-white">
+                                          {isCorrect ? `${idx + 1}` : "-"}
+                                        </td>
+                                        <td className="py-2 px-2 font-semibold text-white truncate max-w-[80px]" title={p.name}>{p.name}</td>
+                                        <td className="py-2 px-2">
+                                          {!answered ? (
+                                            <span className="text-zinc-600">N/A</span>
+                                          ) : isCorrect ? (
+                                            <span className="text-emerald-400 font-bold">ĐÚNG</span>
+                                          ) : (
+                                            <span className="text-red-400 font-bold">SAI</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-2 text-right font-bold">
+                                          {p.answerTime && gameState.questionStartTime 
+                                            ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
+                                            : "-"}
+                                        </td>
+                                        <td className="py-2 px-2 font-bold">
+                                          <span className={proposed.includes("🎉") ? "text-amber-400" : "text-zinc-500"}>
+                                            {proposed}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  });
+                                })()}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </GlassCard>
+
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
