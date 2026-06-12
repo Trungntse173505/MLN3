@@ -226,67 +226,77 @@ export default function ProjectorPage() {
               </div>
             )}
 
-            <div className="bezel-outer">
-              <div className="bezel-inner p-8 md:p-12 text-center">
-                <p className="text-2xl md:text-4xl lg:text-5xl font-extrabold leading-snug md:leading-normal text-white max-w-4xl mx-auto">
-                  {currentQ.statement}
-                </p>
+            {/* Question statement: Only show in question phase */}
+            {gameState.phase === "question" && (
+              <div className="bezel-outer">
+                <div className="bezel-inner p-8 md:p-12 text-center">
+                  <p className="text-2xl md:text-4xl lg:text-5xl font-extrabold leading-snug md:leading-normal text-white max-w-4xl mx-auto">
+                    {currentQ.statement}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Answer Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              {/* ĐÚNG Card */}
-              <div className={`flex items-center justify-between p-6 rounded-2xl border transition-all duration-700 ease-in-out ${
-                gameState.phase === "reveal"
-                  ? currentQ.answer
-                    ? "bg-emerald-500/20 border-emerald-500/40 glow-green scale-105"
-                    : "opacity-0 scale-95 pointer-events-none"
-                  : "bg-emerald-500/5 border-emerald-500/10 glow-green"
-              }`}>
-                <div>
-                  <h3 className="text-2xl font-black text-emerald-300">ĐÚNG</h3>
+            {gameState.phase === "question" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                {/* ĐÚNG Card */}
+                <div className="flex items-center justify-between p-6 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 glow-green">
+                  <div>
+                    <h3 className="text-2xl font-black text-emerald-300">ĐÚNG</h3>
+                  </div>
+                  <span className="text-4xl">🟢</span>
                 </div>
-                <span className="text-4xl">🟢</span>
-              </div>
 
-              {/* SAI Card */}
-              <div className={`flex items-center justify-between p-6 rounded-2xl border transition-all duration-700 ease-in-out ${
-                gameState.phase === "reveal"
-                  ? !currentQ.answer
-                    ? "bg-red-500/20 border-red-500/40 glow-red scale-105"
-                    : "opacity-0 scale-95 pointer-events-none"
-                  : "bg-red-500/5 border-red-500/10 glow-red"
-              }`}>
-                <div>
-                  <h3 className="text-2xl font-black text-red-300">SAI</h3>
+                {/* SAI Card */}
+                <div className="flex items-center justify-between p-6 rounded-2xl border border-red-500/10 bg-red-500/5 glow-red">
+                  <div>
+                    <h3 className="text-2xl font-black text-red-300">SAI</h3>
+                  </div>
+                  <span className="text-4xl">🔴</span>
                 </div>
-                <span className="text-4xl">🔴</span>
               </div>
-            </div>
+            ) : (
+              /* Phase: REVEAL - Center correct answer card */
+              <div className="flex justify-center pt-4">
+                {currentQ.answer ? (
+                  <div className="flex items-center justify-between gap-12 px-12 py-8 rounded-3xl border bg-emerald-500/20 border-emerald-500/40 glow-green max-w-md w-full shadow-2xl shadow-emerald-500/10 scale-105 transition-all duration-700">
+                    <div>
+                      <span className="font-mono text-xs text-emerald-400 uppercase tracking-widest block mb-1">
+                        Đáp án đúng
+                      </span>
+                      <h3 className="text-4xl font-black text-emerald-300">ĐÚNG</h3>
+                    </div>
+                    <span className="text-6xl animate-pulse">🟢</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-12 px-12 py-8 rounded-3xl border bg-red-500/20 border-red-500/40 glow-red max-w-md w-full shadow-2xl shadow-red-500/10 scale-105 transition-all duration-700">
+                    <div>
+                      <span className="font-mono text-xs text-red-400 uppercase tracking-widest block mb-1">
+                        Đáp án đúng
+                      </span>
+                      <h3 className="text-4xl font-black text-red-300">SAI</h3>
+                    </div>
+                    <span className="text-6xl animate-pulse">🔴</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Detailed Round Evaluation Tables for Projector */}
             {gameState.phase === "reveal" && (
               <div className="space-y-6 pt-6 animate-fade-in max-w-5xl mx-auto w-full">
                 {/* Status header banner */}
                 <div className="text-center">
-                  <span className={`inline-block px-6 py-2 rounded-full font-mono text-sm font-bold uppercase tracking-widest ${
-                    gameState.resultsApplied
-                      ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 glow-green"
-                      : "bg-amber-500/10 border border-amber-500/30 text-[#f59e0b] animate-pulse glow-gold"
-                  }`}>
-                    {gameState.resultsApplied 
-                      ? "KẾT QUẢ CHÍNH THỨC" 
+                  <span className={`inline-block px-6 py-2 rounded-full font-mono text-sm font-bold uppercase tracking-widest ${gameState.resultsApplied
+                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 glow-green"
+                    : "bg-amber-500/10 border border-amber-500/30 text-[#f59e0b] animate-pulse glow-gold"
+                    }`}>
+                    {gameState.resultsApplied
+                      ? "KẾT QUẢ CHÍNH THỨC"
                       : "KẾT QUẢ DỰ KIẾN — CHỜ ADMIN XÁC NHẬN"}
                   </span>
                 </div>
-
-                {/* Explanation text if exists */}
-                {currentQ.explanation && (
-                  <div className="max-w-3xl mx-auto text-center px-6 py-3 rounded-xl bg-white/[0.02] border border-white/5">
-                    <p className="text-sm leading-relaxed text-zinc-400">{currentQ.explanation}</p>
-                  </div>
-                )}
 
                 {/* Question 1: Unified Table */}
                 {gameState.currentQuestion === 1 ? (
@@ -336,7 +346,7 @@ export default function ProjectorPage() {
                                     )}
                                   </td>
                                   <td className="py-3 px-4 text-right font-bold text-zinc-300">
-                                    {p.answerTime && gameState.questionStartTime 
+                                    {p.answerTime && gameState.questionStartTime
                                       ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
                                       : "-"}
                                   </td>
@@ -363,7 +373,7 @@ export default function ProjectorPage() {
                     <GlassCard>
                       <div className="space-y-4">
                         <div className="text-sm uppercase font-mono font-bold text-emerald-400 tracking-wider text-center">
-                          🧍 BẢNG NGƯỜI SỐNG ({
+                          🧍 SỐ NGƯỜI SỐNG ({
                             playerList.filter(p => p.status === "alive" || p.status === "winner").length
                           })
                         </div>
@@ -412,7 +422,7 @@ export default function ProjectorPage() {
                                         )}
                                       </td>
                                       <td className="py-2.5 px-3 text-right font-bold text-zinc-300">
-                                        {p.answerTime && gameState.questionStartTime 
+                                        {p.answerTime && gameState.questionStartTime
                                           ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
                                           : "-"}
                                       </td>
@@ -435,7 +445,7 @@ export default function ProjectorPage() {
                     <GlassCard>
                       <div className="space-y-4">
                         <div className="text-sm uppercase font-mono font-bold text-red-400 tracking-wider text-center">
-                          💀 BẢNG NGƯỜI CHẾT ({
+                          💀 SỐ NGƯỜI CHẾT ({
                             playerList.filter(p => p.status === "dead").length
                           })
                         </div>
@@ -484,7 +494,7 @@ export default function ProjectorPage() {
                                         )}
                                       </td>
                                       <td className="py-2.5 px-3 text-right font-bold text-zinc-300">
-                                        {p.answerTime && gameState.questionStartTime 
+                                        {p.answerTime && gameState.questionStartTime
                                           ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
                                           : "-"}
                                       </td>

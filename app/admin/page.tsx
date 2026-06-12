@@ -227,7 +227,7 @@ export default function AdminPage() {
   const targetAnswerCount = gameState.mode === "survival"
     ? aliveCount
     : playerList.filter(p => p.status === "alive" || p.status === "dead").length;
-    
+
   const submittedCount = playerList.filter(p => {
     const isContestant = gameState.mode === "survival"
       ? p.status === "alive"
@@ -260,7 +260,7 @@ export default function AdminPage() {
       })
       .sort((a, b) => a.elapsedTime - b.elapsedTime)
       .slice(0, 5);
-      
+
     leaderboardEntries = correctDeadPlayers;
   }
 
@@ -274,11 +274,10 @@ export default function AdminPage() {
             <span className="text-xs px-2 py-0.5 font-mono uppercase bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full">
               Phase: {gameState.phase}
             </span>
-            <span className={`text-xs px-2 py-0.5 font-mono uppercase rounded-full border ${
-              gameState.mode === "survival" 
-                ? "bg-red-500/10 border-red-500/30 text-red-400 animate-pulse" 
-                : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-            }`}>
+            <span className={`text-xs px-2 py-0.5 font-mono uppercase rounded-full border ${gameState.mode === "survival"
+              ? "bg-red-500/10 border-red-500/30 text-red-400 animate-pulse"
+              : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              }`}>
               Mode: {gameState.mode || "normal"}
             </span>
           </h1>
@@ -302,10 +301,10 @@ export default function AdminPage() {
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+
         {/* Left Side: Game Phase Controls (col-span-8) */}
         <div className="lg:col-span-8 space-y-6">
-          
+
           {/* Fallback warning banner */}
           {gameState.mode === "survival" && (!gameState.survivalContestants || gameState.survivalContestants.length === 0) && winnerCount < 3 && (
             <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-500/30 text-red-400 text-sm font-bold flex items-center gap-3 animate-pulse">
@@ -347,7 +346,7 @@ export default function AdminPage() {
           {/* Phase 2: Question or Phase 3: Reveal View */}
           {(gameState.phase === "question" || gameState.phase === "reveal") && currentQ && (
             <div className="space-y-6">
-              
+
               {/* Question card */}
               <GlassCard>
                 <div className="space-y-4">
@@ -378,9 +377,8 @@ export default function AdminPage() {
                   <div className="flex flex-col md:flex-row gap-4 pt-4 border-t border-white/5 items-start md:items-center justify-between">
                     <div>
                       <span className="text-xs font-mono text-zinc-500 block mb-1">Đáp án đúng</span>
-                      <span className={`text-base font-bold px-3 py-1 rounded-full ${
-                        currentQ.answer ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
-                      }`}>
+                      <span className={`text-base font-bold px-3 py-1 rounded-full ${currentQ.answer ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
+                        }`}>
                         {currentQ.answer ? "ĐÚNG" : "SAI"}
                       </span>
                     </div>
@@ -461,11 +459,10 @@ export default function AdminPage() {
                           key={diff}
                           type="button"
                           onClick={() => setNextDiff(diff)}
-                          className={`px-4 py-2 rounded-full border text-xs font-mono font-bold transition-spring cursor-pointer ${
-                            nextDiff === diff
-                              ? "bg-amber-500 text-black border-amber-500"
-                              : "bg-white/[0.02] border-white/10 text-zinc-400 hover:bg-white/5"
-                          }`}
+                          className={`px-4 py-2 rounded-full border text-xs font-mono font-bold transition-spring cursor-pointer ${nextDiff === diff
+                            ? "bg-amber-500 text-black border-amber-500"
+                            : "bg-white/[0.02] border-white/10 text-zinc-400 hover:bg-white/5"
+                            }`}
                         >
                           {diff === "easy" ? "Dễ" : diff === "medium" ? "Trung bình" : "Khó"}
                         </button>
@@ -582,7 +579,7 @@ export default function AdminPage() {
                                       )}
                                     </td>
                                     <td className="py-2.5 px-3 text-right font-bold">
-                                      {p.answerTime && gameState.questionStartTime 
+                                      {p.answerTime && gameState.questionStartTime
                                         ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
                                         : "-"}
                                     </td>
@@ -612,7 +609,7 @@ export default function AdminPage() {
                       <GlassCard>
                         <div className="space-y-4">
                           <div className="text-xs uppercase font-mono font-bold text-emerald-400">
-                            🧍 BẢNG NGƯỜI SỐNG ({
+                            🧍 SỐ NGƯỜI SỐNG ({
                               playerList.filter(p => p.status === "alive" || p.status === "winner").length
                             })
                           </div>
@@ -661,7 +658,7 @@ export default function AdminPage() {
                                           )}
                                         </td>
                                         <td className="py-2 px-2 text-right font-bold">
-                                          {p.answerTime && gameState.questionStartTime 
+                                          {p.answerTime && gameState.questionStartTime
                                             ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
                                             : "-"}
                                         </td>
@@ -684,7 +681,7 @@ export default function AdminPage() {
                       <GlassCard>
                         <div className="space-y-4">
                           <div className="text-xs uppercase font-mono font-bold text-red-400">
-                            💀 BẢNG NGƯỜI CHẾT ({
+                            💀 SỐ NGƯỜI CHẾT ({
                               playerList.filter(p => p.status === "dead").length
                             })
                           </div>
@@ -733,7 +730,7 @@ export default function AdminPage() {
                                           )}
                                         </td>
                                         <td className="py-2 px-2 text-right font-bold">
-                                          {p.answerTime && gameState.questionStartTime 
+                                          {p.answerTime && gameState.questionStartTime
                                             ? `${((p.answerTime - gameState.questionStartTime) / 1000).toFixed(2)}s`
                                             : "-"}
                                         </td>
@@ -772,7 +769,7 @@ export default function AdminPage() {
                     Tất cả {questions.length} câu hỏi đã được hoàn thành. Dưới đây là danh sách những người chơi sống sót cuối cùng.
                   </p>
                 </div>
-                
+
                 {playerList.filter(p => p.status === "winner").length > 0 ? (
                   <div className="pt-4 max-w-sm mx-auto">
                     <div className="text-xs uppercase font-mono tracking-wider text-zinc-500 mb-3 text-center">
@@ -825,7 +822,7 @@ export default function AdminPage() {
                 <div className="max-h-[500px] overflow-y-auto space-y-2 pr-1">
                   {playerList.map((player) => {
                     const isCorrect = player.answer === currentQ?.answer;
-                    
+
                     return (
                       <div
                         key={player.name}
@@ -833,17 +830,17 @@ export default function AdminPage() {
                       >
                         <div className="flex flex-col">
                           <span className="font-semibold text-sm max-w-[150px] truncate">{player.name}</span>
-                          
+
                           {/* Display what they answered in real-time */}
                           {(gameState.phase === "question" || gameState.phase === "reveal") && (
                             <div className="flex flex-col gap-0.5 mt-0.5">
                               <span className="text-[10px] font-mono text-zinc-500">
                                 {player.answer !== null && player.answer !== undefined ? (
-                                  <span className={gameState.phase === "reveal" 
+                                  <span className={gameState.phase === "reveal"
                                     ? (isCorrect ? "text-emerald-400 font-bold" : "text-red-400 font-bold")
                                     : "text-amber-400"
                                   }>
-                                    Đã gửi: {player.answer ? "ĐÚNG" : "SAI"} 
+                                    Đã gửi: {player.answer ? "ĐÚNG" : "SAI"}
                                     {player.answerTime && gameState.questionStartTime && (
                                       ` (${((player.answerTime - gameState.questionStartTime) / 1000).toFixed(1)}s)`
                                     )}
@@ -867,20 +864,19 @@ export default function AdminPage() {
                             onClick={() =>
                               markPlayerStatus(
                                 player.name,
-                                player.status === "alive" 
-                                  ? "dead" 
-                                  : player.status === "dead" 
-                                    ? "winner" 
+                                player.status === "alive"
+                                  ? "dead"
+                                  : player.status === "dead"
+                                    ? "winner"
                                     : "alive"
                               )
                             }
-                            className={`p-1.5 rounded-full border transition-spring hover:scale-105 cursor-pointer ${
-                              player.status === "alive"
-                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-                                : player.status === "winner"
-                                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-emerald-500/20"
-                                  : "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
-                            }`}
+                            className={`p-1.5 rounded-full border transition-spring hover:scale-105 cursor-pointer ${player.status === "alive"
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                              : player.status === "winner"
+                                ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-emerald-500/20"
+                                : "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                              }`}
                             title={`Status: ${player.status}. Bấm để đổi.`}
                           >
                             {player.status === "alive" ? (
