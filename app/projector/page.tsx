@@ -177,7 +177,7 @@ export default function ProjectorPage() {
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <span className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-                  Câu hỏi {gameState.currentQuestion} / 30
+                  Câu hỏi {gameState.currentQuestion} / {questions.length}
                 </span>
                 {gameState.mode === "survival" ? (
                   <span className="text-xs font-mono font-bold text-red-500 border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 rounded-full tracking-wider animate-pulse">

@@ -225,7 +225,7 @@ export default function PlayPage() {
         {gameState.phase === "question" && currentQ && (
           <div className="space-y-6 animate-fade-in-up">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-mono text-zinc-500">Câu hỏi {gameState.currentQuestion}/30</span>
+              <span className="text-xs font-mono text-zinc-500">Câu hỏi {gameState.currentQuestion}/{questions.length}</span>
               {gameState.mode === "survival" && (
                 <span className="text-xs font-mono font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 rounded-full tracking-wider animate-pulse">
                   🔥 SINH TỒN
@@ -417,7 +417,7 @@ export default function PlayPage() {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold tracking-tight text-white">TRÒ CHƠI KẾT THÚC</h2>
               <p className="text-zinc-400 text-sm leading-relaxed px-4">
-                Đã hoàn thành toàn bộ 30 câu hỏi về chủ nghĩa yêu nước Việt Nam.
+                Đã hoàn thành toàn bộ {questions.length} câu hỏi về chủ nghĩa yêu nước Việt Nam.
               </p>
             </div>
 

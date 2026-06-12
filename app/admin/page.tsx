@@ -298,7 +298,7 @@ export default function AdminPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-zinc-500">Câu hỏi {gameState.currentQuestion}/30</span>
+                      <span className="text-xs font-mono text-zinc-500">Câu hỏi {gameState.currentQuestion}/{questions.length}</span>
                       <span className="text-[10px] font-mono font-bold text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full uppercase">
                         {currentQ.difficulty === "easy" ? "Dễ" : currentQ.difficulty === "medium" ? "Trung bình" : "Khó"}
                       </span>
@@ -479,7 +479,7 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   <h2 className="text-2xl font-bold tracking-tight text-white">Trò chơi hoàn tất!</h2>
                   <p className="text-sm text-zinc-400">
-                    Tất cả 30 câu hỏi đã được hoàn thành. Dưới đây là danh sách những người chơi sống sót cuối cùng.
+                    Tất cả {questions.length} câu hỏi đã được hoàn thành. Dưới đây là danh sách những người chơi sống sót cuối cùng.
                   </p>
                 </div>
                 
