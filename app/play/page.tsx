@@ -426,9 +426,9 @@ export default function PlayPage() {
               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 glow-green"
               : "bg-red-500/10 border-red-500/30 text-red-300 glow-red"
               }`}>
-              <span className="text-sm font-mono block mb-1">Kết quả chung cuộc</span>
+              <span className="text-sm font-mono block mb-1">Kết quả</span>
               <span className="text-lg font-bold tracking-wider">
-                {playerData.status === "winner" || playerData.status === "alive" ? "👑CHIẾN THẮNG CHUNG CUỘC!" : "💀 ĐÃ BỊ LOẠI"}
+                {playerData.status === "winner" || playerData.status === "alive" ? "👑 CHIẾN THẮNG!" : "💀 ĐÃ BỊ LOẠI"}
               </span>
             </div>
           </div>
