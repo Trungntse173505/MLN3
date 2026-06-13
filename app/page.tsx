@@ -21,7 +21,7 @@ export default function Home() {
             ĐÚNG HAY SAI?
           </h1>
           <p className="text-sm md:text-base text-zinc-400 max-w-[50ch] mx-auto leading-relaxed">
-            Hệ thống trò chơi trắc nghiệm real-time môn học HCM202, kết hợp tương tác thực tế và cơ chế hồi sinh tự động.
+            Hệ thống trò chơi trắc nghiệm real-time môn học MLN131, kết hợp tương tác thực tế và cơ chế hồi sinh tự động.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export default function Home() {
       </main>
 
       <footer className="absolute bottom-6 left-6 right-6 flex justify-between items-center text-[10px] font-mono text-zinc-700">
-        <span>© {new Date().getFullYear()} HCM202</span>
+        <span>© {new Date().getFullYear()} MLN131</span>
         <span>DESIGNED BY ANTIGRAVITY</span>
       </footer>
     </div>

@@ -270,7 +270,7 @@ export default function AdminPage() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <span>HCM202 Admin Dashboard</span>
+            <span>MLN131 Admin Dashboard</span>
             <span className="text-xs px-2 py-0.5 font-mono uppercase bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full">
               Phase: {gameState.phase}
             </span>

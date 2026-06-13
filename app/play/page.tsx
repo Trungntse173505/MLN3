@@ -112,7 +112,7 @@ export default function PlayPage() {
               <Trophy size={28} />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
-              HCM202 — Đúng hay Sai
+              MLN131 — Đúng hay Sai
             </h1>
             <p className="text-zinc-400 text-sm">
               Nhập tên của bạn để tham gia lớp học

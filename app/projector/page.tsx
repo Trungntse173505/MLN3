@@ -564,7 +564,7 @@ export default function ProjectorPage() {
 
       {/* Footer / Status bar */}
       <footer className="flex justify-between items-center text-[10px] font-mono text-zinc-600 border-t border-white/5 pt-6 z-10">
-        <span>© {new Date().getFullYear()} HCM202 QUIZ GAME</span>
+        <span>© {new Date().getFullYear()} MLN131 QUIZ GAME</span>
         <span>MÀN HÌNH MÁY CHIẾU LỚP HỌC</span>
       </footer>
     </main>
