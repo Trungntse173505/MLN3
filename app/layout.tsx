@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HCM202 — Đúng hay Sai?",
-  description: "Trò chơi học tập chủ nghĩa yêu nước & tư tưởng Hồ Chí Minh",
+  title: "MLN131 — Đúng hay Sai?",
+  description: ".",
 };
 
 export default function RootLayout({

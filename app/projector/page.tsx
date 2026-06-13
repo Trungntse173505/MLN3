@@ -113,7 +113,7 @@ export default function ProjectorPage() {
         <div className="flex items-center gap-3">
           <div className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] animate-pulse glow-gold" />
           <span className="font-mono text-sm uppercase tracking-[0.25em] text-[#f59e0b] font-bold">
-            HCM202 — ĐÚNG HAY SAI
+            MLN131 — ĐÚNG HAY SAI
           </span>
         </div>
 
@@ -147,7 +147,7 @@ export default function ProjectorPage() {
                 ĐÚNG HAY SAI?
               </h1>
               <p className="text-zinc-400 text-lg md:text-xl font-medium max-w-2xl mx-auto pt-2">
-                Trò chơi trắc nghiệm tương tác thực tế kết hợp cơ chế hồi sinh siêu tốc
+                Trò chơi trắc nghiệm tương tác thực tế kết hợp cơ chế hồi sinh
               </p>
             </div>
 
