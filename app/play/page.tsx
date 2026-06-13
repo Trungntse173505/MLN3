@@ -431,7 +431,7 @@ export default function PlayPage() {
               }`}>
               <span className="text-sm font-mono block mb-1">Kết quả chung cuộc</span>
               <span className="text-lg font-bold tracking-wider">
-                {playerData.status === "winner" || playerData.status === "alive" ? "👑 TOP 3 CHIẾN THẮNG CHUNG CUỘC!" : "💀 ĐÃ BỊ LOẠI"}
+                {playerData.status === "winner" || playerData.status === "alive" ? "👑CHIẾN THẮNG CHUNG CUỘC!" : "💀 ĐÃ BỊ LOẠI"}
               </span>
             </div>
           </div>
