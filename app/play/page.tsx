@@ -420,9 +420,6 @@ export default function PlayPage() {
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold tracking-tight text-white">TRÒ CHƠI KẾT THÚC</h2>
-              <p className="text-zinc-400 text-sm leading-relaxed px-4">
-                Đã hoàn thành toàn bộ {questions.length} câu hỏi về chủ nghĩa yêu nước Việt Nam.
-              </p>
             </div>
 
             <div className={`p-6 rounded-2xl border ${playerData.status === "winner" || playerData.status === "alive"
