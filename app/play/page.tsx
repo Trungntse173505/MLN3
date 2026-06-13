@@ -181,7 +181,7 @@ export default function PlayPage() {
   const isContestant = gameState.survivalContestants
     ? gameState.survivalContestants.includes(playerData.name)
     : true;
-  const isAllowedToAnswer = (gameState.mode === "normal" && (playerData.status === "alive" || playerData.status === "dead")) ||
+  const isAllowedToAnswer = (gameState.mode === "normal" && (playerData.status === "alive" || (playerData.status === "dead" && !gameState.finalRound))) ||
     (gameState.mode === "survival" && playerData.status === "alive" && isContestant);
 
   return (
@@ -226,11 +226,6 @@ export default function PlayPage() {
           <div className="space-y-6 animate-fade-in-up">
             <div className="flex justify-between items-center">
               <span className="text-xs font-mono text-zinc-500">Câu hỏi {gameState.currentQuestion}/{questions.length}</span>
-              {gameState.mode === "survival" && (
-                <span className="text-xs font-mono font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 rounded-full tracking-wider animate-pulse">
-                  🔥 SINH TỒN
-                </span>
-              )}
             </div>
 
             <GlassCard>
@@ -242,16 +237,12 @@ export default function PlayPage() {
             {isAllowedToAnswer ? (
               <div className="space-y-4">
                 <div className="text-center text-xs font-mono tracking-wider text-zinc-500 uppercase px-2 leading-relaxed">
-                  {gameState.mode === "normal" ? (
-                    playerData.status === "alive"
-                      ? (playerData.lastAction === "resurrected"
-                        ? "🎉 Bạn đã được hồi sinh và đang tranh suất Top 3."
-                        : "🟢 Bạn đang còn sống. Hãy trả lời để tiếp tục sống sót.")
-                      : "💀 Bạn đã bị loại, nhưng vẫn có thể tranh hồi sinh. Trả lời đúng và nhanh nhất để quay lại game."
-                  ) : (
+                  {playerData.status === "alive" ? (
                     playerData.lastAction === "resurrected"
-                      ? "🎉 Bạn đã được hồi sinh và đang tranh suất Top 3."
-                      : "🔥 Bạn đang tranh suất chiến thắng còn lại. Hãy trả lời đúng và nhanh nhất."
+                      ? "🎉 Bạn đã được hồi sinh!"
+                      : "🟢 Bạn đang còn sống. Hãy trả lời để tiếp tục."
+                  ) : (
+                    "💀 Bạn đang bị loại. Hãy trả lời đúng và nhanh nhất để tranh suất hồi sinh."
                   )}
                 </div>
 
@@ -312,12 +303,12 @@ export default function PlayPage() {
                 </div>
                 <div className="space-y-1">
                   <h3 className="font-bold text-red-400 text-base">
-                    {gameState.mode === "survival" && !isContestant ? "Bạn đã bị loại khỏi vòng tranh suất." : "BẠN ĐÃ BỊ LOẠI"}
+                    BẠN ĐÃ BỊ LOẠI
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed px-4">
-                    {gameState.mode === "survival" && !isContestant
-                      ? "Vòng sinh tồn đã bắt đầu và bạn không nằm trong danh sách tranh suất. Hãy theo dõi các bạn khác thi đấu!"
-                      : "Vòng sinh tồn đã bắt đầu và tính năng hồi sinh đã bị khóa. Hãy theo dõi các bạn còn lại thi đấu!"}
+                    {gameState.finalRound
+                      ? "Tính năng hồi sinh đã bị khóa. Hãy theo dõi các bạn còn lại thi đấu!"
+                      : "Hãy theo dõi các bạn còn lại thi đấu!"}
                   </p>
                 </div>
               </div>
@@ -380,24 +371,20 @@ export default function PlayPage() {
                   <Ghost size={20} />
                 </div>
                 <h3 className="font-semibold text-zinc-400 text-sm">
-                  {gameState.mode === "survival" && !isContestant
-                    ? "Bạn đã bị loại khỏi vòng tranh suất."
-                    : (gameState.eliminatedThisRound?.includes(playerData.name) ? "BẠN ĐÃ BỊ LOẠI 💀" : "Vẫn đang bị loại 💀")}
+                  {gameState.eliminatedThisRound?.includes(playerData.name) ? "BẠN ĐÃ BỊ LOẠI 💀" : "Vẫn đang bị loại 💀"}
                 </h3>
                 <p className="text-xs text-zinc-500 px-6 leading-relaxed">
-                  {gameState.mode === "survival" && !isContestant
-                    ? "Rất tiếc, bạn đã bị loại khỏi vòng tranh suất chiến thắng. Hãy tiếp tục theo dõi diễn biến trận đấu nhé!"
-                    : (gameState.eliminatedThisRound?.includes(playerData.name) ? (
-                      selectedAnswer === currentQ.answer
-                        ? "Bạn đã trả lời ĐÚNG nhưng chậm nhất và bị loại để đủ quota. Cố gắng ở câu sau!"
-                        : "Bạn đã trả lời SAI hoặc không trả lời kịp nên đã bị loại. Cố gắng ở câu sau!"
-                    ) : (
-                      gameState.mode === "survival"
-                        ? "Vòng sinh tồn đã bắt đầu nên cơ hội hồi sinh đã đóng. Hãy theo dõi tiếp nhé!"
-                        : selectedAnswer === currentQ.answer
-                          ? "Bạn trả lời ĐÚNG nhưng chưa đủ nhanh để lọt top hồi sinh. Cố gắng thêm ở câu sau!"
-                          : "Bạn trả lời chưa chính xác. Hãy ôn lại kiến thức và canh câu sau nhé!"
-                    ))}
+                  {gameState.eliminatedThisRound?.includes(playerData.name) ? (
+                    selectedAnswer === currentQ.answer
+                      ? "Bạn đã trả lời ĐÚNG nhưng chậm nhất và bị loại để đủ quota. Cố gắng ở câu sau!"
+                      : "Bạn đã trả lời SAI hoặc không trả lời kịp nên đã bị loại. Cố gắng ở câu sau!"
+                  ) : (
+                    gameState.finalRound
+                      ? "Tính năng hồi sinh đã bị khóa. Hãy theo dõi tiếp nhé!"
+                      : selectedAnswer === currentQ.answer
+                        ? "Bạn trả lời ĐÚNG nhưng chưa đủ nhanh để lọt top hồi sinh. Cố gắng thêm ở câu sau!"
+                        : "Bạn trả lời chưa chính xác. Hãy ôn lại kiến thức và canh câu sau nhé!"
+                  )}
                 </p>
               </div>
             ) : (

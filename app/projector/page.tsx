@@ -193,15 +193,6 @@ export default function ProjectorPage() {
                 <span className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
                   Câu hỏi {gameState.currentQuestion} / {questions.length}
                 </span>
-                {gameState.mode === "survival" ? (
-                  <span className="text-xs font-mono font-bold text-red-500 border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 rounded-full tracking-wider animate-pulse">
-                    🔥 VÒNG SINH TỒN — TÌM ĐỦ 3 NGƯỜI THẮNG
-                  </span>
-                ) : (
-                  <span className="text-xs font-mono font-bold text-amber-500 border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 rounded-full tracking-wider">
-                    🟢 VÒNG THƯỜNG (HỒI SINH MỞ)
-                  </span>
-                )}
               </div>
 
               {/* Submission status bar */}
@@ -214,17 +205,6 @@ export default function ProjectorPage() {
                 </div>
               )}
             </div>
-
-            {gameState.mode === "survival" && (
-              <div className="p-5 rounded-2xl bg-red-500/10 border border-red-500/20 max-w-2xl mx-auto w-full text-center space-y-2 animate-fade-in">
-                <h2 className="text-sm font-mono font-bold text-red-400 uppercase tracking-[0.2em]">Vòng Tranh Suất Top 3</h2>
-                <div className="grid grid-cols-3 gap-4 text-xs font-mono text-zinc-300">
-                  <div>Đã có: <strong className="text-white text-sm">{3 - (gameState.winnerSlotsRemaining ?? 3)} winner</strong></div>
-                  <div>Còn thiếu: <strong className="text-white text-sm">{gameState.winnerSlotsRemaining ?? 3} slot</strong></div>
-                  <div>Số người đang tranh: <strong className="text-white text-sm">{gameState.survivalContestants?.length || 0}</strong></div>
-                </div>
-              </div>
-            )}
 
             {/* Question statement: Only show in question phase */}
             {gameState.phase === "question" && (
@@ -533,7 +513,7 @@ export default function ProjectorPage() {
                 TRÒ CHƠI KẾT THÚC
               </h1>
               <p className="text-zinc-400 text-base max-w-xl mx-auto">
-                Chúc mừng tất cả các bạn đã hoàn thành xuất sắc thử thách tìm hiểu về chủ nghĩa yêu nước Việt Nam!
+                Chúc mừng tất cả các bạn đã hoàn thành xuất sắc thử thách
               </p>
             </div>
 

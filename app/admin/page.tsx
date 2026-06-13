@@ -274,12 +274,6 @@ export default function AdminPage() {
             <span className="text-xs px-2 py-0.5 font-mono uppercase bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full">
               Phase: {gameState.phase}
             </span>
-            <span className={`text-xs px-2 py-0.5 font-mono uppercase rounded-full border ${gameState.mode === "survival"
-              ? "bg-red-500/10 border-red-500/30 text-red-400 animate-pulse"
-              : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-              }`}>
-              Mode: {gameState.mode || "normal"}
-            </span>
           </h1>
           <p className="text-xs text-zinc-500 mt-1 font-mono">
             Trình điều khiển trò chơi học tập Đúng / Sai & Hồi sinh
@@ -358,15 +352,19 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      {gameState.finalRound ? (
-                        <span className="text-xs font-mono font-bold text-red-500 border border-red-500/30 bg-red-500/10 px-2 py-0.5 rounded-full tracking-wider">
-                          🔥 CHUNG KẾT (KHÓA HỒI SINH)
-                        </span>
-                      ) : (
-                        <span className="text-xs font-mono font-bold text-amber-500 border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded-full tracking-wider">
-                          🟢 VÒNG LOẠI (HỒI SINH BẬT)
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleSetFinalRound(!gameState.finalRound)}
+                        disabled={loading}
+                        className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border transition-spring cursor-pointer ${
+                          gameState.finalRound
+                            ? "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
+                        }`}
+                        title="Bấm để bật/tắt tính năng hồi sinh"
+                      >
+                        {gameState.finalRound ? "🔴 HỒI SINH: TẮT" : "🟢 HỒI SINH: BẬT"}
+                      </button>
                     </div>
                   </div>
 

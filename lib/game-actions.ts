@@ -224,9 +224,9 @@ export async function revealAnswer() {
     }
   });
 
-  // 2. Calculate pending resurrection (Q2+ only, max 1 dead player who answered correct and fastest)
+  // 2. Calculate pending resurrection (Q2+ only, max 1 dead player who answered correct and fastest, only when finalRound is false)
   const pendingResurrections: string[] = [];
-  if (state.currentQuestion > 1) {
+  if (state.currentQuestion > 1 && !state.finalRound) {
     const deadCorrectCandidates = deadPlayers.filter(
       p => p.answer === correctAnswer && p.answerTime != null
     );
